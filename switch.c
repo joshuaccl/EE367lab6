@@ -18,6 +18,8 @@
 #define MAX_FILE_NAME 100
 #define PKT_PAYLOAD_MAX 100
 #define TENMILLISEC 10000   /* 10 millisecond sleep */
+#define true 1
+#define false 0
 
 /* Types of packets */
 
@@ -32,10 +34,10 @@ struct file_buf {
 };
 
 struct forwarding {
-    bool valid;
+    int valid;
     int dest_id;
     int port_id;
-}
+};
 
 
 /*
