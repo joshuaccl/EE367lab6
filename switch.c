@@ -208,7 +208,7 @@ j_q->tail = NULL;
 int job_q_num(struct job_queue *j_q)
 {
 return j_q->occ;
-}
+}Nyj
 
 void init_forwarding_table(struct forwarding table[100]){
     for(int i = 0; i < 100; i++){
@@ -221,7 +221,7 @@ int get_host_at_port(struct forwarding table[100], int port_id){
     if(table[port_id].valid == true) return table[port_id].dest_id;
     else return -1;
 }
-int set_src_at_port(struct forwarding table[100], int dest_id, port_id){
+int set_src_at_port(struct forwarding table[100], int dest_id, int port_id){
     //when we find a destination and a port, add it to the table
     table[port_id].dest_id = host_id;
     table[port_id].valid = true;
