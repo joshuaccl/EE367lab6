@@ -210,16 +210,6 @@ int job_q_num(struct job_queue *j_q)
 return j_q->occ;
 }
 
-int get_host_port_f_table( struct forwarding *table, int host_id){
-    struct forwarding *f_table = table;
-    while(f_table->next != NULL){
-       if(f_table->dest_id == host_id)
-            return f_table->port_id;
-        f_table = f_table->next;
-    }
-    return 0;
-}
-
 void init_forwarding_table(struct forwarding table[100]){
     for(int i = 0; i < 100; i++){
         table[i].port_id = i;
