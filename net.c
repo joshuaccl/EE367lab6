@@ -458,13 +458,17 @@ else {
 	for (i=0; i<node_num; i++) { 
 		fscanf(fp, " %c ", &node_type);
 
-		if (node_type = 'H') {
+		if (node_type == 'H') {
+			printf("host node %c\n",node_type);
 			fscanf(fp, " %d ", &node_id);
+			printf("node id %d\n",node_id);
 			g_net_node[i].type = HOST;
 			g_net_node[i].id = node_id;
 		}
-		else if(node_type = 'S') {
+		else if(node_type == 'S') {
+			printf("switch node\n");
 			fscanf(fp, " %d ", &node_id);
+			printf("node id %d\n",node_id);
 			g_net_node[i].type = SWITCH;
 			g_net_node[i].id = node_id;
 		}
@@ -472,7 +476,7 @@ else {
 			printf(" net.c: Unidentified Node Type\n");
 		}
 
-		if (i != node_id) {
+		if ( (i) != node_id) {
 			printf(" net.c: Incorrect node id\n");
 			fclose(fp);
 			return(0);
