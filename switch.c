@@ -208,7 +208,7 @@ j_q->tail = NULL;
 int job_q_num(struct job_queue *j_q)
 {
 return j_q->occ;
-}Nyj
+}
 
 void init_forwarding_table(struct forwarding table[100]){
     for(int i = 0; i < 100; i++){
@@ -221,7 +221,7 @@ int get_host_at_port(struct forwarding table[100], int port_id){
     if(table[port_id].valid == true) return table[port_id].dest_id;
     else return -1;
 }
-int set_src_at_port(struct forwarding table[100], int dest_id, int port_id){
+int set_src_at_port(struct forwarding table[100], int host_id, int port_id){
     //when we find a destination and a port, add it to the table
     table[port_id].dest_id = host_id;
     table[port_id].valid = true;
@@ -240,7 +240,7 @@ int find_host_in_table(struct forwarding table[100], int host_id){
  *  Main 
  */
 
-void switch_main(int switch_id)
+void switch_main(int host_id)
 {
 
     struct forwarding f_table[100];
@@ -398,7 +398,7 @@ void switch_main(int switch_id)
                 new_job->packet = in_packet;
                 
                 // putting the port in the forwarding table
-                set_src_at_port(f_table, *in_packet->src; , k);
+                set_src_at_port(f_table, in_packet->src , k);
                 // switch(in_packet->type) {
                 //     /* Consider the packet type */
 
