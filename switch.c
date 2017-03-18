@@ -219,6 +219,37 @@ int job_q_num(struct job_queue *j_q)
 return j_q->occ;
 }
 */
+struct forwarding {
+    int valid;
+    int dest_id;
+    int port_id;
+};
+
+void init_forwarding_table(struct forwarding table[100]){
+    for(int i = 0; i < 100; i++){
+        table[i].port_id = i;
+        table[i].valid = 0;   // initialize all invalid
+        table[i].dest_id = -1; //set dest_id = -1 for undefined 
+    }
+}
+int get_host_at_port(struct forwarding table[100], int port_id){
+    if(table[port_id].valid == 1) return table[port_id].dest_id;
+    else return -1;
+}
+int set_src_at_port(struct forwarding table[100], int host_id, int port_id){
+    //when we find a destination and a port, add it to the table
+    table[port_id].dest_id = host_id;
+    table[port_id].valid = 1;
+}
+int find_host_in_table(struct forwarding table[100], int host_id){
+    //return the port number of a host we are looking for
+    //returns -1 if the host is not defined on a port
+    for(int i = 0; i < 100; i++){
+        if(table[i].dest_id==host_id && table[i].valid==1)
+            return i;
+    }
+    return -1;
+}
 
 /*
  *  Main 
@@ -234,7 +265,7 @@ int dir_valid = 0;
 char man_msg[MAN_MSG_LENGTH];
 char man_reply_msg[MAN_MSG_LENGTH];
 char man_cmd;
-struct man_port_at_host *man_port;  // Port to the manager
+struct man_port_at_host *man_port;  // Port to the manage
 
 struct net_port *node_port_list;
 struct net_port **node_port;  // Array of pointers to node ports
@@ -258,6 +289,10 @@ struct host_job *new_job2;
 
 struct job_queue job_q;
 
+/* forwarding table  */
+struct forwarding f_table[100];
+init_forwarding_table(f_table);
+int f_table_length = 0;
 
 /*
  * Initialize pipes 
@@ -294,9 +329,9 @@ for (k = 0; k < node_port_num; k++) {
 /* Initialize the job queue */
 job_q_init(&job_q);
 // Initialize the forwarding table
-char forwarding_table[100][2];
+// char forwarding_table[100][2];
 char packet_dest;
-int table_length=0;
+// int table_length=0;
 
 while(1) {
 	
@@ -314,25 +349,34 @@ while(1) {
 			new_job = (struct host_job *) 
 				malloc(sizeof(struct host_job));
 			new_job->in_port_index = k;
-			new_job->packet = in_packet;
+			new_job->packet = &in_packet;
 
-			switch(in_packet->type) {
+			if(get_host_at_port(f_table, k)==-1){
+				set_src_at_port(f_table, in_packet->src , k);
+					f_table_length ++;
+			}
+			
+			job_q_add(&job_q, new_job);
+					free(in_packet);
+					free(new_job);
+				
+				// switch(in_packet->type) {
 				/* Consider the packet type */
 
 				/* 
 				 * The next two packet types are 
 				 * the ping request and ping reply
 				 */
-				case (char) PKT_PING_REQ: 
-					new_job->type = JOB_PING_SEND_REPLY;
-					job_q_add(&job_q, new_job);
-					break;
+				// case (char) PKT_PING_REQ: 
+				// 	new_job->type = JOB_PING_SEND_REPLY;
+				// 	job_q_add(&job_q, new_job);
+				// 	break;
 
-				case (char) PKT_PING_REPLY:
-					ping_reply_received = 1;
-					free(in_packet);
-					free(new_job);
-					break;
+				// case (char) PKT_PING_REPLY:
+				// 	ping_reply_received = 1;
+				// 	free(in_packet);
+				// 	free(new_job);
+				// 	break;
 
 				/* 
 				 * The next two packet types
@@ -347,20 +391,20 @@ while(1) {
 				 * in its payload
 				 */
 		
-				case (char) PKT_FILE_UPLOAD_START:
-					new_job->type 
-						= JOB_FILE_UPLOAD_RECV_START;
-					job_q_add(&job_q, new_job);
-					break;
+				// case (char) PKT_FILE_UPLOAD_START:
+				// 	new_job->type 
+				// 		= JOB_FILE_UPLOAD_RECV_START;
+				// 	job_q_add(&job_q, new_job);
+				// 	break;
 
-				case (char) PKT_FILE_UPLOAD_END:
-					new_job->type 
-						= JOB_FILE_UPLOAD_RECV_END;
-					job_q_add(&job_q, new_job);
-					break;
-				default:
-					free(in_packet);
-					free(new_job);
+				// case (char) PKT_FILE_UPLOAD_END:
+				// 	new_job->type 
+				// 		= JOB_FILE_UPLOAD_RECV_END;
+				// 	job_q_add(&job_q, new_job);
+				// 	break;
+				// default:
+				// 	free(in_packet);
+				// 	free(new_job);
 			}
 		}
 		else {
@@ -380,38 +424,50 @@ while(1) {
 		int i=0; 
 		packet_dest = new_job->packet->dst;
 
-		while( i<100 || forwarding_table[1][i] != new_job->packet->dst)
-		{
-			i++;
+		if(find_host_in_table(f_table, packet_dest)==-1){
+			//host not in table
+			//send to all ports except the received port
+			for (k=0; k<node_port_num; k++) {
+				if(k != new_job->packet->src)
+				packet_send(node_port[k], new_job->packet);
+			}
 		}
+		else {
+				packet_send(node_port[find_host_in_table(f_table, packet_dest)], new_job->packet);
+		}
+
+		// while( i<100 || forwarding_table[1][i] != new_job->packet->dst)
+		// {
+		// 	i++;
+		// }
 		
-		//did not find the address in table
-		if(i==100)
-		{
-			forwarding_table[0][table_length]='1';
-			forwarding_table[1][table_length]=packet_dest;
-			forwarding_table[2][table_length]=new_job->packet->src;
-			table_length++;
+		// //did not find the address in table
+		// if(i==100)
+		// {
+		// 	forwarding_table[0][table_length]='1';
+		// 	forwarding_table[1][table_length]=packet_dest;
+		// 	forwarding_table[2][table_length]=new_job->packet->src;
+		// 	table_length++;
 				
 			
 
-		/* Send packets on all ports */	
-			for (k=0; k<node_port_num; k++) {
-				packet_send(node_port[k], new_job->packet);
-			}
-			free(new_job->packet);
-			free(new_job);
-			break;
+		// /* Send packets on all ports */	
+		// 	for (k=0; k<node_port_num; k++) {
+		// 		packet_send(node_port[k], new_job->packet);
+		// 	}
+		// 	free(new_job->packet);
+		// 	free(new_job);
+		// 	break;
 
 
 
-		}
-		else //send packet on the port found in the forwarding table
-		{
-		packet_send(node_port[forwarding_table[2][i]] , new_job->packet);
+		// }
+		// else //send packet on the port found in the forwarding table
+		// {
+		// packet_send(node_port[forwarding_table[2][i]] , new_job->packet);
 		free(new_job->packet);
 		free(new_job);
-		}
+		// }
 	}
 
 
