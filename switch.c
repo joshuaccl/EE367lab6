@@ -250,6 +250,12 @@ int find_host_in_table(struct forwarding table[100], int host_id){
     }
     return -1;
 }
+void print_ftable(struct forwarding table[100]){
+	for(int i = 0; i < 100; i++){
+		if(table[i].valid ==1)
+		printf("port: %d, hostid: %d\n", i, table[i].dest_id);
+	}
+}
 
 /*
  *  Main 
@@ -339,26 +345,27 @@ while(1) {
 	 * Get packets from incoming links and translate to jobs
   	 * Put jobs in job queue
  	 */
+	  
 
 	for (k = 0; k < node_port_num; k++) { /* Scan all ports */
-
 		in_packet = (struct packet *) malloc(sizeof(struct packet));
 		n = packet_recv(node_port[k], in_packet);
 
-		if ((n > 0) && ((int) in_packet->dst == host_id)) {
+		// if ((n > 0) && ((int) in_packet->dst == host_id)) {
+			if(n>0){
+				// printf("switch:packet received from port %d of %d\n", k, node_port_num);
 			new_job = (struct host_job *) 
 				malloc(sizeof(struct host_job));
 			new_job->in_port_index = k;
-			new_job->packet = &in_packet;
+			new_job->packet = in_packet;
 
 			if(get_host_at_port(f_table, k)==-1){
-				set_src_at_port(f_table, in_packet->src , k);
+				set_src_at_port(f_table, (int) in_packet->src , k);
 					f_table_length ++;
 			}
 			
 			job_q_add(&job_q, new_job);
-					free(in_packet);
-					free(new_job);
+				
 				
 				// switch(in_packet->type) {
 				/* Consider the packet type */
@@ -420,19 +427,26 @@ while(1) {
 
 		/* Get a new job from the job queue */
 		new_job = job_q_remove(&job_q);
-		
-		int i=0; 
-		packet_dest = new_job->packet->dst;
+	
+		// int i=0; 
+		packet_dest = (int)new_job->packet->dst;
+
+print_ftable(f_table);
+
 
 		if(find_host_in_table(f_table, packet_dest)==-1){
 			//host not in table
 			//send to all ports except the received port
+			
 			for (k=0; k<node_port_num; k++) {
-				if(k != new_job->packet->src)
-				packet_send(node_port[k], new_job->packet);
+				if(k != new_job2->packet->src){
+					printf("switch:sending packet on port %d of %d\n", k, node_port_num);
+					packet_send(node_port[k], new_job->packet);
+				}
 			}
 		}
 		else {
+			printf("switch: sending packet to %d \n", packet_dest);
 				packet_send(node_port[find_host_in_table(f_table, packet_dest)], new_job->packet);
 		}
 

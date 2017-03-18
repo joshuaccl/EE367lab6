@@ -313,11 +313,14 @@ while(1) {
 						malloc(sizeof(struct packet));	
 				new_packet->src = (char) host_id;
 				new_packet->dst = (char) dst;
+				// printf("host %d: dst = %d\n", host_id, new_packet->dst);
 				new_packet->type = (char) PKT_PING_REQ;
 				new_packet->length = 0;
 				new_job = (struct host_job *) 
 						malloc(sizeof(struct host_job));
 				new_job->packet = new_packet;
+				// printf("host %d: uh dst = %d\n", host_id, new_job->packet->dst);
+				// printf("host %d: src = %d\n",host_id, new_job->packet->src);
 				new_job->type = JOB_SEND_PKT_ALL_PORTS;
 				job_q_add(&job_q, new_job);
 
@@ -327,6 +330,7 @@ while(1) {
 				new_job2->type = JOB_PING_WAIT_FOR_REPLY;
 				new_job2->ping_timer = 10;
 				job_q_add(&job_q, new_job2);
+				// printf("host:  job q size: %d\n", job_q.occ);
 
 				break;
 
@@ -359,6 +363,7 @@ while(1) {
 		n = packet_recv(node_port[k], in_packet);
 
 		if ((n > 0) && ((int) in_packet->dst == host_id)) {
+			// printf("host %d:packet received from port %d of %d\n", host_id, k, node_port_num);
 			new_job = (struct host_job *) 
 				malloc(sizeof(struct host_job));
 			new_job->in_port_index = k;
@@ -423,8 +428,11 @@ while(1) {
 	if (job_q_num(&job_q) > 0) {
 
 		/* Get a new job from the job queue */
+		// printf("host:  job q size efore: %d\n", job_q.occ);
 		new_job = job_q_remove(&job_q);
-
+		// printf("host:  job q size aftah: %d\n", job_q.occ);
+		// printf("host %d: dst = %c\n",host_id, (char)new_job->packet->dst);
+		// printf("host %d: src = %d\n",host_id, new_job->packet->src);
 
 		/* Send packet on all ports */
 		switch(new_job->type) {
@@ -432,6 +440,8 @@ while(1) {
 		/* Send packets on all ports */	
 		case JOB_SEND_PKT_ALL_PORTS:
 			for (k=0; k<node_port_num; k++) {
+				// printf("host %d: sending packet to port %d of %d\n",host_id, k, node_port_num);
+				
 				packet_send(node_port[k], new_job->packet);
 			}
 			free(new_job->packet);
