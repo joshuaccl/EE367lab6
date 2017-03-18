@@ -171,7 +171,6 @@ int n;
 printf("Enter id of host to ping: ");
 scanf("%d", &host_to_ping);
 n = sprintf(msg, "p %d", host_to_ping);
-printf("%s\n", msg);
 write(curr_host->send_fd, msg, n);
 
 n = 0;
