@@ -431,7 +431,7 @@ while(1) {
 		// int i=0; 
 		packet_dest = (int)new_job->packet->dst;
 
-print_ftable(f_table);
+// print_ftable(f_table);
 
 
 		if(find_host_in_table(f_table, packet_dest)==-1){
@@ -440,13 +440,17 @@ print_ftable(f_table);
 			
 			for (k=0; k<node_port_num; k++) {
 				if(k != new_job2->packet->src){
+					#ifdef DEBUG
 					printf("switch:sending packet on port %d of %d\n", k, node_port_num);
+					#endif
 					packet_send(node_port[k], new_job->packet);
 				}
 			}
 		}
 		else {
+			#ifdef DEBUG
 			printf("switch: sending packet to %d \n", packet_dest);
+			#endif
 				packet_send(node_port[find_host_in_table(f_table, packet_dest)], new_job->packet);
 		}
 
@@ -483,6 +487,7 @@ print_ftable(f_table);
 		free(new_job);
 		// }
 	}
+
 
 
 

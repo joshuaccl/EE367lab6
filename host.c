@@ -70,10 +70,12 @@ name[f->name_length] = '\0';
 void file_buf_put_name(struct file_buf *f, char name[], int length)
 {
 int i;
-
+// printf("file_buf_put_name: name =");
 for (i=0; i<length; i++) {
 	f->name[i] = name[i];
+	// printf("%c",name[i]);
 }
+// printf(" \n");
 f->name_length = length;
 }
 
@@ -361,9 +363,10 @@ while(1) {
 
 		in_packet = (struct packet *) malloc(sizeof(struct packet));
 		n = packet_recv(node_port[k], in_packet);
-
 		if ((n > 0) && ((int) in_packet->dst == host_id)) {
-			// printf("host %d:packet received from port %d of %d\n", host_id, k, node_port_num);
+			#ifdef DEBUG
+			printf("host %d:packet received from port %d of %d\n", host_id, k, node_port_num);
+			#endif
 			new_job = (struct host_job *) 
 				malloc(sizeof(struct host_job));
 			new_job->in_port_index = k;
@@ -401,15 +404,22 @@ while(1) {
 				 */
 		
 				case (char) PKT_FILE_UPLOAD_START:
+				#ifdef DEBUG
+					printf("host %d: received- PKT_FILE_UPLOAD_START \n", host_id);
+				#endif
 					new_job->type 
 						= JOB_FILE_UPLOAD_RECV_START;
 					job_q_add(&job_q, new_job);
 					break;
 
 				case (char) PKT_FILE_UPLOAD_END:
+				// printf("host %d: received- PKT_FILE_UPLOAD_END \n", host_id);
 					new_job->type 
 						= JOB_FILE_UPLOAD_RECV_END;
 					job_q_add(&job_q, new_job);
+					#ifdef DEBUG
+					printf("host %d: received- PKT_FILE_UPLOAD_END \n", host_id);
+					#endif
 					break;
 				default:
 					free(in_packet);
@@ -440,8 +450,9 @@ while(1) {
 		/* Send packets on all ports */	
 		case JOB_SEND_PKT_ALL_PORTS:
 			for (k=0; k<node_port_num; k++) {
-				// printf("host %d: sending packet to port %d of %d\n",host_id, k, node_port_num);
-				
+				#ifdef DEBUG
+				printf("host %d: sending packet to port %d of %d\n",host_id, k, node_port_num);
+				#endif
 				packet_send(node_port[k], new_job->packet);
 			}
 			free(new_job->packet);
@@ -501,7 +512,9 @@ while(1) {
 
 			/* This job is for the sending host */
 		case JOB_FILE_UPLOAD_SEND:
-
+		#ifdef DEBUG
+		printf("host %d: JOB_FILE_UPLOAD_SEND \n", host_id);
+		#endif
 			/* Open file */
 			if (dir_valid == 1) {
 				n = sprintf(name, "./%s/%s", 
@@ -586,7 +599,9 @@ while(1) {
 			/* The next two jobs are for the receving host */
 
 		case JOB_FILE_UPLOAD_RECV_START:
-
+		#ifdef DEBUG
+		printf("host %d: JOB_FILE_UPLOAD_RECV_START \n", host_id);
+		#endif
 			/* Initialize the file buffer data structure */
 			file_buf_init(&f_buf_upload);
 
@@ -603,7 +618,9 @@ while(1) {
 			break;
 
 		case JOB_FILE_UPLOAD_RECV_END:
-
+		#ifdef DEBUG
+			printf("host %d: JOB_FILE_UPLOAD_RECV_END \n", host_id);
+		#endif
 			/* 
 			 * Download packet payload into file buffer 
 			 * data structure 
@@ -645,6 +662,7 @@ while(1) {
 					}
 
 					fclose(fp);
+					fp=NULL;
 				}	
 			}
 
@@ -652,6 +670,7 @@ while(1) {
 		}
 
 	}
+
 
 
 	/* The host goes to sleep for 10 ms */
