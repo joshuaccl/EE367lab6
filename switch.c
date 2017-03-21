@@ -16,6 +16,7 @@
 #include "host.h"
 #include "packet.h"
 #include "switch.h"
+#define DEBUG
 
 #define MAX_FILE_BUFFER 1000
 #define MAX_MSG_LENGTH 100
@@ -353,7 +354,9 @@ while(1) {
 
 		// if ((n > 0) && ((int) in_packet->dst == host_id)) {
 			if(n>0){
-				// printf("switch:packet received from port %d of %d\n", k, node_port_num);
+			#ifdef DEBUG
+				printf("switch:packet received from port %d of %d\n", k, node_port_num);
+			#endif
 			new_job = (struct host_job *) 
 				malloc(sizeof(struct host_job));
 			new_job->in_port_index = k;
@@ -430,9 +433,9 @@ while(1) {
 	
 		// int i=0; 
 		packet_dest = (int)new_job->packet->dst;
-
-// print_ftable(f_table);
-
+#ifdef DEBUG
+print_ftable(f_table);
+#endif
 
 		if(find_host_in_table(f_table, packet_dest)==-1){
 			//host not in table
