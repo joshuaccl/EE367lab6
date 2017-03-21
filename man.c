@@ -215,6 +215,7 @@ usleep(TENMILLISEC);
 }
 
 
+
 /***************************** 
  * Main loop of the manager  *
  *****************************/
@@ -258,12 +259,18 @@ while(1) {
 			break;
 		case 'd': /* Download a file from a host */
 			printf("This command is not implemented\n");
+			// file_upload(curr_host);
 			break;
 		case 'q':  /* Quit */
 			return;
 		default: 
 			printf("\nInvalid, you entered %c\n\n", cmd);
 	}
+	usleep(TENMILLISEC);
+	usleep(TENMILLISEC);
+	usleep(TENMILLISEC);
+	usleep(TENMILLISEC);
+		usleep(TENMILLISEC);
 }   
 } 
 
