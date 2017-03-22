@@ -364,58 +364,11 @@ while(1) {
 
 			if(get_host_at_port(f_table, k)==-1){
 				set_src_at_port(f_table, (int) in_packet->src , k);
-					f_table_length ++;
+					f_table_length++;
 			}
 			
 			job_q_add(&job_q, new_job);
 				
-				
-				// switch(in_packet->type) {
-				/* Consider the packet type */
-
-				/* 
-				 * The next two packet types are 
-				 * the ping request and ping reply
-				 */
-				// case (char) PKT_PING_REQ: 
-				// 	new_job->type = JOB_PING_SEND_REPLY;
-				// 	job_q_add(&job_q, new_job);
-				// 	break;
-
-				// case (char) PKT_PING_REPLY:
-				// 	ping_reply_received = 1;
-				// 	free(in_packet);
-				// 	free(new_job);
-				// 	break;
-
-				/* 
-				 * The next two packet types
-				 * are for the upload file operation.
-				 *
-				 * The first type is the start packet
-				 * which includes the file name in
-				 * the payload.
-				 *
-				 * The second type is the end packet
-				 * which carries the content of the file
-				 * in its payload
-				 */
-		
-				// case (char) PKT_FILE_UPLOAD_START:
-				// 	new_job->type 
-				// 		= JOB_FILE_UPLOAD_RECV_START;
-				// 	job_q_add(&job_q, new_job);
-				// 	break;
-
-				// case (char) PKT_FILE_UPLOAD_END:
-				// 	new_job->type 
-				// 		= JOB_FILE_UPLOAD_RECV_END;
-				// 	job_q_add(&job_q, new_job);
-				// 	break;
-				// default:
-				// 	free(in_packet);
-				// 	free(new_job);
-			// }
 		}
 		else {
 			free(in_packet);
@@ -433,16 +386,17 @@ while(1) {
 	
 		// int i=0; 
 		packet_dest = (int)new_job->packet->dst;
-#ifdef DEBUG
-print_ftable(f_table);
-#endif
+		#ifdef DEBUG
+		printf("switch: forwarding table\n");
+		print_ftable(f_table);
+		#endif
 
 		if(find_host_in_table(f_table, packet_dest)==-1){
 			//host not in table
 			//send to all ports except the received port
 			
 			for (k=0; k<node_port_num; k++) {
-				if(k != new_job2->packet->src){
+				if(k != new_job->in_port_index){
 					#ifdef DEBUG
 					printf("switch:sending packet on port %d of %d\n", k, node_port_num);
 					#endif
@@ -454,7 +408,7 @@ print_ftable(f_table);
 			#ifdef DEBUG
 			printf("switch: sending packet to %d \n", packet_dest);
 			#endif
-				packet_send(node_port[find_host_in_table(f_table, packet_dest)], new_job->packet);
+			packet_send(node_port[find_host_in_table(f_table, packet_dest)], new_job->packet);
 		}
 
 		// while( i<100 || forwarding_table[1][i] != new_job->packet->dst)

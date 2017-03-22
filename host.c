@@ -214,6 +214,16 @@ int job_q_num(struct job_queue *j_q)
 return j_q->occ;
 }
 
+int job_q_len(struct job_queue *j_q){
+	int i = 0;
+	struct host_job *j;
+	j = j_q->head;
+	while( j != NULL){
+		j = j->next;
+		i++;
+	}
+	return i;
+}
 /*
  *  Main 
  */
@@ -355,7 +365,7 @@ while(1) {
 					new_job->fname_upload[i] = name[i];
 				}
 				new_job->fname_upload[i] = '\0';
-				new_job->packet= NULL;
+				// new_job->packet= NULL;
 				job_q_add(&job_q, new_job);
 					
 				break;
@@ -390,21 +400,24 @@ while(1) {
 				 * the ping request and ping reply
 				 */
 				case (char) PKT_PING_REQ: 
-				#ifdef DEBUG
-					printf("host %d: received- PKT_PING_RQ \n", host_id);
-				#endif
+					#ifdef DEBUG
+						printf("host %d: received- PKT_PING_RQ \n", host_id);
+					#endif
 				
 					new_job->type = JOB_PING_SEND_REPLY;
 					job_q_add(&job_q, new_job);
+					#ifdef DEBUG
+						printf("host %d: received- PKT_PING_RQ -- added job to q %d\n", host_id, job_q.occ);
+					#endif
 					break;
 
 				case (char) PKT_PING_REPLY:
-				#ifdef DEBUG
-					printf("host %d: received- PKT_PING_REPLY \n", host_id);
-				#endif
+					#ifdef DEBUG
+						printf("host %d: received- PKT_PING_REPLY \n", host_id);
+					#endif
 					ping_reply_received = 1;
-					free(in_packet);
-					free(new_job);
+					// free(in_packet);
+					// free(new_job);
 					break;
 
 				/* 
@@ -421,9 +434,9 @@ while(1) {
 				 */
 		
 				case (char) PKT_FILE_UPLOAD_START:
-				#ifdef DEBUG
-					printf("host %d: received- PKT_FILE_UPLOAD_START \n", host_id);
-				#endif
+					#ifdef DEBUG
+						printf("host %d: received- PKT_FILE_UPLOAD_START \n", host_id);
+					#endif
 					new_job->type 
 						= JOB_FILE_UPLOAD_RECV_START;
 					job_q_add(&job_q, new_job);
@@ -439,8 +452,9 @@ while(1) {
 					#endif
 					break;
 				default:
-					free(in_packet);
-					free(new_job);
+					// free(in_packet);
+					// free(new_job);
+					break;
 			}
 		}
 		else {
@@ -456,9 +470,12 @@ while(1) {
 
 		/* Get a new job from the job queue */
 		// printf("host:  job q size efore: %d\n", job_q.occ);
+		#ifdef DEBUG
+		printf("host %d:  job q length befo: %d , %d\n", host_id, job_q_len(&job_q), job_q.occ);
+		#endif
 		new_job = job_q_remove(&job_q);
 		#ifdef DEBUG
-		printf("host %d:  doing one job \n", host_id);
+		printf("host %d:  job q lengthafta: %d , %d\n", host_id, job_q_len(&job_q), job_q.occ);
 		#endif
 		// printf("host %d: dst = %c\n",host_id, (char)new_job->packet->dst);
 		// printf("host %d: src = %d\n",host_id, new_job->packet->src);
@@ -474,8 +491,8 @@ while(1) {
 					#endif
 					packet_send(node_port[k], new_job->packet);
 				}
-				free(new_job->packet);
-				free(new_job);
+				// free(new_job->packet);
+				// free(new_job);
 				break;
 
 			/* The next three jobs deal with the pinging process */
@@ -504,8 +521,8 @@ while(1) {
 				job_q_add(&job_q, new_job2);
 
 				/* Free old packet and job memory space */
-				free(new_job->packet);
-				free(new_job);
+				// free(new_job->packet);
+				// free(new_job);
 				break;
 
 			case JOB_PING_WAIT_FOR_REPLY:
@@ -517,9 +534,10 @@ while(1) {
 
 				if (ping_reply_received == 1) {
 					n = sprintf(man_reply_msg, "Ping acked!"); 
-					man_reply_msg[n] = '\0';
-					write(man_port->send_fd, man_reply_msg, n+1);
-					free(new_job);
+					// man_reply_msg[n] = '\0';
+					// write(man_port->send_fd, man_reply_msg, n+1);
+					write(man_port->send_fd, man_reply_msg, n);
+					// free(new_job);
 				}
 				else if (new_job->ping_timer > 1) {
 					new_job->ping_timer--;
@@ -527,9 +545,10 @@ while(1) {
 				}
 				else { /* Time out */
 					n = sprintf(man_reply_msg, "Ping time out!"); 
-					man_reply_msg[n] = '\0';
-					write(man_port->send_fd, man_reply_msg, n+1);
-					free(new_job);
+					// man_reply_msg[n] = '\0';
+					// write(man_port->send_fd, man_reply_msg, n+1);
+					write(man_port->send_fd, man_reply_msg, n);
+					// free(new_job);
 				}
 
 				break;	
@@ -572,19 +591,7 @@ while(1) {
 						}
 						new_packet->length = i;
 
-						/* 
-						* Create a job to send the packet
-						* and put it in the job queue
-						*/
-						// free(new_job->packet);
-						// free(new_job); //KASEY
-						// new_job = (struct host_job *)
-						// 	malloc(sizeof(struct host_job));
-						// new_job->type = JOB_SEND_PKT_ALL_PORTS;
-						// new_job->packet = new_packet;
-						// job_q_add(&job_q, new_job);
-						
-						//KASEY
+
 						new_job2 = (struct host_job *)
 							malloc(sizeof(struct host_job));
 						new_job2->type = JOB_SEND_PKT_ALL_PORTS;
@@ -620,15 +627,15 @@ while(1) {
 						* and put the job in the job queue
 						*/
 
-						new_job3 = (struct host_job *)
+						new_job = (struct host_job *)
 							malloc(sizeof(struct host_job));
-						new_job3->type 
+						new_job->type 
 							= JOB_SEND_PKT_ALL_PORTS;
-						new_job3->packet = new_packet2;
-						job_q_add(&job_q, new_job3);
+						new_job->packet = new_packet2;
+						job_q_add(&job_q, new_job);
 						
 						// free(new_job->packet);
-						free(new_job); 
+						// free(new_job); 
 						#ifdef DEBUG
 						printf("host %d: JOB_FILE_UPLOAD_SEND p3 \n", host_id);
 						printf("host %d:  job q size: %d\n",host_id, job_q.occ);
@@ -659,8 +666,8 @@ while(1) {
 					new_job->packet->payload, 
 					new_job->packet->length);
 
-				free(new_job->packet);
-				free(new_job);
+				// free(new_job->packet);
+				// free(new_job);
 				break;
 
 			case JOB_FILE_UPLOAD_RECV_END:
@@ -675,8 +682,8 @@ while(1) {
 					new_job->packet->payload,
 					new_job->packet->length);
 
-				free(new_job->packet);
-				free(new_job);
+				// free(new_job->packet);
+				// free(new_job);
 
 				if (dir_valid == 1) {
 					printf("dir_valid\n");
@@ -710,9 +717,13 @@ while(1) {
 						fclose(fp);
 						fp=NULL;
 						printf("closed fp\n");
-					}	
+					}
+
 				}
 
+				break;
+			default:
+				// free(new_job);
 				break;
 		}
 
