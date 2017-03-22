@@ -11,6 +11,7 @@
 #include "net.h"
 #include "man.h"
 #include "host.h"
+#include "switch.h"
 
 
 void main()
