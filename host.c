@@ -176,6 +176,7 @@ if (j_q->head == NULL ) {
 	j_q->head = j;
 	j_q->tail = j;
 	j_q->occ = 1;
+	j->next = NULL;
 }
 else {
 	(j_q->tail)->next = j;
@@ -348,6 +349,7 @@ while(1) {
 				ping_reply_received = 0;
 				new_job2->type = JOB_PING_WAIT_FOR_REPLY;
 				new_job2->ping_timer = 10;
+				new_job2->packet = NULL;
 				job_q_add(&job_q, new_job2);
 				// printf("host:  job q size: %d\n", job_q.occ);
 
@@ -363,7 +365,7 @@ while(1) {
 					new_job->fname_upload[i] = name[i];
 				}
 				new_job->fname_upload[i] = '\0';
-				// new_job->packet= NULL;
+				new_job->packet= NULL;
 				job_q_add(&job_q, new_job);
 					
 				break;
@@ -386,15 +388,9 @@ while(1) {
 						malloc(sizeof(struct host_job));
 				new_job->type = JOB_SEND_PKT_ALL_PORTS;
 				new_job->packet = new_packet;
-
-
-				// new_job->packet= NULL;
 				job_q_add(&job_q, new_job);
 					
 				break;
-			
-			default:
-			;
 		}
 	}
 	
@@ -440,8 +436,15 @@ while(1) {
 						printf("host %d: received- PKT_PING_REPLY \n", host_id);
 					#endif
 					ping_reply_received = 1;
-					// free(in_packet);
-					// free(new_job);
+					if(in_packet != NULL){
+						free(in_packet);
+
+						in_packet=NULL;
+					}
+					if(new_job!= NULL){
+						free(new_job);
+						new_job=NULL;
+					}
 					break;
 
 				/* 
@@ -488,7 +491,7 @@ while(1) {
 							new_job->fname_upload[i] = in_packet->payload[i];
 						}
 					new_job->fname_upload[i] = '\0';
-				new_job->packet= NULL;
+					new_job->packet= NULL;
 					printf("host %d: filename -%s- to src: %d \n", host_id, new_job->fname_upload,
 						(int)in_packet->src);
 					job_q_add(&job_q, new_job);
@@ -496,10 +499,13 @@ while(1) {
 					break;
 
 				default:
-					// free(in_packet);
-					// free(new_job);
+					if(new_job!=NULL){
+						free(new_job);
+						new_job=NULL;
+					}
 					break;
 			}
+
 		}
 		else {
 			if(in_packet!= NULL){
@@ -531,14 +537,14 @@ while(1) {
 					#endif
 					packet_send(node_port[k], new_job->packet);
 				}
-				// if(new_job->packet != NULL){
-				// 	free(new_job->packet);
-				// 	new_job->packet = NULL;
-				// }
-				// if(new_job != NULL){
-				// 	free(new_job);
-				// 	new_job = NULL;
-				// }
+				if(new_job->packet != NULL){
+					free(new_job->packet);
+					new_job->packet = NULL;
+				}
+				if(new_job != NULL){
+					free(new_job);
+					new_job = NULL;
+				}
 
 				break;
 
@@ -568,14 +574,14 @@ while(1) {
 				job_q_add(&job_q, new_job2);
 
 				/* Free old packet and job memory space */
-				// if(new_job->packet != NULL){
-				// 	free(new_job->packet);
-				// 	new_job->packet = NULL;
-				// }
-				// if(new_job != NULL){
-				// 	free(new_job);
-				// 	new_job = NULL;
-				// }
+				if(new_job->packet != NULL){
+					free(new_job->packet);
+					new_job->packet = NULL;
+				}
+				if(new_job != NULL){
+					free(new_job);
+					new_job = NULL;
+				}
 				// free(new_job->packet);
 				// free(new_job);
 				break;
@@ -593,6 +599,14 @@ while(1) {
 					// write(man_port->send_fd, man_reply_msg, n+1);
 					write(man_port->send_fd, man_reply_msg, n);
 					// free(new_job);
+					if(new_job->packet != NULL){
+						free(new_job->packet);
+						new_job->packet = NULL;
+					}
+					if(new_job != NULL){
+						free(new_job);
+						new_job = NULL;
+					}
 				}
 				else if (new_job->ping_timer > 1) {
 					new_job->ping_timer--;
@@ -603,6 +617,14 @@ while(1) {
 					// man_reply_msg[n] = '\0';
 					// write(man_port->send_fd, man_reply_msg, n+1);
 					write(man_port->send_fd, man_reply_msg, n);
+					if(new_job->packet != NULL){
+						free(new_job->packet);
+						new_job->packet = NULL;
+					}
+					if(new_job != NULL){
+						free(new_job);
+						new_job = NULL;
+					}
 					// free(new_job);
 				}
 
@@ -654,6 +676,7 @@ while(1) {
 						new_job2->type = JOB_SEND_PKT_ALL_PORTS;
 						new_job2->packet = new_packet;
 						job_q_add(&job_q, new_job2);
+
 						/* 
 						* Create the second packet which
 						* has the file contents
@@ -684,27 +707,27 @@ while(1) {
 							* and put the job in the job queue
 							*/
 
-							new_job = (struct host_job *)
+							new_job3 = (struct host_job *)
 								malloc(sizeof(struct host_job));
-							new_job->type 
+							new_job3->type 
 								= JOB_SEND_PKT_ALL_PORTS;
-							new_job->packet = new_packet2;
+							new_job3->packet = new_packet2;
 
 							printf("host creating packet of file contents\n");
-							job_q_add(&job_q, new_job);
+							job_q_add(&job_q, new_job3);
 						}
 
 					}
 					fclose(fp);
-						// fp = NULL;
-							// if(new_job->packet != NULL){
-							// 	free(new_job->packet);
-							// 	new_job->packet = NULL;
-							// }
-							// if(new_job != NULL){
-							// 	free(new_job);
-							// 	new_job = NULL;
-							// }
+						fp = NULL;
+						if(new_job->packet != NULL){
+							free(new_job->packet);
+							new_job->packet = NULL;
+						}
+						if(new_job != NULL){
+							free(new_job);
+							new_job = NULL;
+						}
 						// free(new_job->packet);
 						// free(new_job); 
 						#ifdef DEBUG
@@ -734,6 +757,14 @@ while(1) {
 					new_job->packet->payload, 
 					new_job->packet->length);
 
+					if(new_job->packet != NULL){
+						free(new_job->packet);
+						new_job->packet = NULL;
+					}
+					if(new_job != NULL){
+						free(new_job);
+						new_job = NULL;
+					}
 				// free(new_job->packet);
 				// free(new_job);
 				break;
@@ -793,8 +824,17 @@ while(1) {
 							// memset(f_buf_upload.buffer, 0,MAX_FILE_BUFFER);
 
 						}
-							fclose(fp);
-							// fp=NULL;
+						fclose(fp);
+						fp=NULL;
+						if(new_job->packet != NULL){
+							free(new_job->packet);
+							new_job->packet = NULL;
+						}
+						if(new_job != NULL){
+							free(new_job);
+							new_job = NULL;
+						}
+							
 							printf("-----------------------\n");
 							printf("%s", f_buf_upload.buffer);
 
@@ -804,10 +844,17 @@ while(1) {
 
 				break;
 			default:
-				// free(new_job);
+				if(new_job->packet != NULL){
+					free(new_job->packet);
+					new_job->packet = NULL;
+				}
+				if(new_job!=NULL){
+					free(new_job);
+					new_job= NULL;
+				}
 				break;
 		}
-
+	
 	} // end of job
 
 

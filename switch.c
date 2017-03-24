@@ -25,201 +25,6 @@
 #define PKT_PAYLOAD_MAX 100
 #define TENMILLISEC 10000   /* 10 millisecond sleep */
 
-/* Types of packets */
-/*
-struct file_buf {
-	char name[MAX_FILE_NAME];
-	int name_length;
-	char buffer[MAX_FILE_BUFFER+1];
-	int head;
-	int tail;
-	int occ;
-	FILE *fd;
-};
-*/
-
-/*
- * File buffer operations
- */
-/*
- Initialize file buffer data structure 
-void file_buf_init(struct file_buf *f)
-{
-f->head = 0;
-f->tail = MAX_FILE_BUFFER;
-f->occ = 0;
-f->name_length = 0;
-}
-*/
-
-/* 
- * Get the file name in the file buffer and store it in name 
- * Terminate the string in name with tne null character
- */
-/*
-void file_buf_get_name(struct file_buf *f, char name[])
-{
-int i;
-
-for (i=0; i<f->name_length; i++) {
-	name[i] = f->name[i];
-}
-name[f->name_length] = '\0';
-}
-*/
-/*
- *  Put name[] into the file name in the file buffer
- *  length = the length of name[]
- */
-/*
-void file_buf_put_name(struct file_buf *f, char name[], int length)
-{
-int i;
-
-for (i=0; i<length; i++) {
-	f->name[i] = name[i];
-}
-f->name_length = length;
-}
-*/
-/*
- *  Add 'length' bytes n string[] to the file buffer
- */
-/*
-int file_buf_add(struct file_buf *f, char string[], int length)
-{
-int i = 0;
-
-while (i < length && f->occ < MAX_FILE_BUFFER) {
-	f->tail = (f->tail + 1) % (MAX_FILE_BUFFER + 1);
-	f->buffer[f->tail] = string[i];
-	i++;
-        f->occ++;
-}
-return(i);
-}
-*/
-/*
- *  Remove bytes from the file buffer and store it in string[] 
- *  The number of bytes is length.
- */
-/*
-int file_buf_remove(struct file_buf *f, char string[], int length)
-{
-int i = 0;
-
-while (i < length && f->occ > 0) {
-	string[i] = f->buffer[f->head];
-	f->head = (f->head + 1) % (MAX_FILE_BUFFER + 1);
-	i++;
-        f->occ--;
-}
-
-return(i);
-}
-
-*/
-/*
- * Operations with the manager
- */
-/*
-int get_man_command(struct man_port_at_host *port, char msg[], char *c) {
-
-int n;
-int i;
-int k;
-
-n = read(port->recv_fd, msg, MAN_MSG_LENGTH);  Get command from manager */
-/*
-if (n>0) {   Remove the first char from "msg" 
-	for (i=0; msg[i]==' ' && i<n; i++);
-	*c = msg[i];
-	i++;
-	for (; msg[i]==' ' && i<n; i++);
-	for (k=0; k+i<n; k++) {
-		msg[k] = msg[k+i];
-	}
-	msg[k] = '\0';
-}
-return n;
-
-}
-*/
-/*
- * Operations requested by the manager
- */
-
-/* Send back state of the host to the manager as a text message */
-/*
-void reply_display_host_state(
-		struct man_port_at_host *port,
-		char dir[],
-		int dir_valid,
-		int host_id)
-{
-int n;
-char reply_msg[MAX_MSG_LENGTH];
-
-if (dir_valid == 1) {
-	n =sprintf(reply_msg, "%s %d", dir, host_id);
-}
-else {
-	n = sprintf(reply_msg, "None %d", host_id);
-}
-
-write(port->send_fd, reply_msg, n);
-}
-
-*/
-
-/* Job queue operations */
-
-/* Add a job to the job queue */
-/*
-void job_q_add(struct job_queue *j_q, struct host_job *j)
-{
-if (j_q->head == NULL ) {
-	j_q->head = j;
-	j_q->tail = j;
-	j_q->occ = 1;
-}
-else {
-	(j_q->tail)->next = j;
-	j->next = NULL;
-	j_q->tail = j;
-	j_q->occ++;
-}
-}
-*/
-
-
-/* Remove job from the job queue, and return pointer to the job*/
-/*
-struct host_job *job_q_remove(struct job_queue *j_q)
-{
-struct host_job *j;
-
-if (j_q->occ == 0) return(NULL);
-j = j_q->head;
-j_q->head = (j_q->head)->next;
-j_q->occ--;
-return(j);
-}
-
-
- Initialize job queue */
-/*void job_q_init(struct job_queue *j_q)
-{
-j_q->occ = 0;
-j_q->head = NULL;
-j_q->tail = NULL;
-}
-
-int job_q_num(struct job_queue *j_q)
-{
-return j_q->occ;
-}
-*/
 struct forwarding {
     int valid;
     int dest_id;
@@ -353,7 +158,7 @@ while(1) {
 		n = packet_recv(node_port[k], in_packet);
 
 		// if ((n > 0) && ((int) in_packet->dst == host_id)) {
-			if(n>0){
+		if(n>0){
 			#ifdef DEBUG
 				printf("switch:packet received from port %d of %d\n", k, node_port_num);
 			#endif
@@ -371,7 +176,11 @@ while(1) {
 				
 		}
 		else {
-			free(in_packet);
+			if(in_packet!= NULL){
+				free(in_packet);
+				in_packet=NULL;
+			}
+			
 		}
 	}
 
@@ -440,8 +249,16 @@ while(1) {
 		// else //send packet on the port found in the forwarding table
 		// {
 		// packet_send(node_port[forwarding_table[2][i]] , new_job->packet);
-		free(new_job->packet);
-		free(new_job);
+		if(new_job->packet != NULL){
+			free(new_job->packet);
+			new_job->packet = NULL;
+		}
+		if(new_job != NULL){
+			free(new_job);
+			new_job = NULL;
+		}
+		
+		
 		// }
 	}
 
