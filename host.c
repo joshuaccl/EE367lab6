@@ -49,6 +49,7 @@ f->head = 0;
 f->tail = MAX_FILE_BUFFER;
 f->occ = 0;
 f->name_length = 0;
+
 }
 
 /* 
@@ -821,11 +822,12 @@ while(1) {
 							// }
 							fprintf(fp, f_buf_upload.buffer);
 							f_buf_upload.buffer[0]='\0';
-							// memset(f_buf_upload.buffer, 0,MAX_FILE_BUFFER);
+							memset(f_buf_upload.buffer, 0,MAX_FILE_BUFFER+1);
 
 						}
 						fclose(fp);
 						fp=NULL;
+
 						if(new_job->packet != NULL){
 							free(new_job->packet);
 							new_job->packet = NULL;
