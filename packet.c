@@ -102,12 +102,13 @@ void packet_send(struct net_port *port, struct packet *p)
 				freeaddrinfo(servinfo); 		// all done with this structure
 
 				// SEND MESSAGE ON SERVER
-				if(send(sockfd, msg, MAX, 0) ==-1)
+				if(send(sockfd, msg, MAX+4, 0) ==-1)
 
 				// if (send(sockfd, "Hello, world!", 13, 0) == -1)
 				{ perror("send"); }
 
 				printf("			Sending message with packet.c\n");
+				memset(msg, 0,MAX+4);
 				// for(i = 0; i < MAX; i++){
 				// 	printf("%c", msg[i]);
 				// }
@@ -120,13 +121,13 @@ void packet_send(struct net_port *port, struct packet *p)
 
 int packet_recv(struct net_port *port, struct packet *p)
 {
-		char msg[PAYLOAD_MAX+4];
+		char msg[MAX+4];
 		int n;
 		int i;
 
 		if (port->type == PIPE)
 		{
-			n = read(port->pipe_recv_fd, msg, PAYLOAD_MAX+4);
+			n = read(port->pipe_recv_fd, msg, MAX+4);
 			if (n>0)
 			{
 				p->src = (char) msg[0];

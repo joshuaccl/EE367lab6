@@ -330,7 +330,8 @@ while(1)
 					char msg[100+4];
 					int d;
 
-					n = recv(new_fd, msg, 100-1, 0);
+					// n = recv(new_fd, msg, 100-1, 0); //KASEY
+					n = recv(new_fd, msg, 100+4, 0);
 
           // printf("RECEIEVED:    %d\n", n);
 
@@ -350,6 +351,7 @@ while(1)
 							in_packet->payload[d] = msg[d+4];
 						}
 					}
+					close(new_fd);
 			}
 	    else
 	    {}   //printf("No data within five seconds.\n");
@@ -361,7 +363,7 @@ while(1)
 		if(n>0)
     {
 			#ifdef DEBUG
-				printf("switch:packet received from port %d of %d for host %d \n", k, node_port_num, in_packet->dst);
+				printf("switch:packet received from port %d of %d for host %d \n", k, node_port_num, (int) in_packet->dst);
 			#endif
 			new_job = (struct host_job *)
 				malloc(sizeof(struct host_job));
@@ -397,7 +399,7 @@ while(1)
 		new_job = job_q_remove(&job_q);
 
 		// int i=0;
-		packet_dest = (int)new_job->packet->dst;
+		packet_dest = new_job->packet->dst;
 		#ifdef DEBUG
 		printf("switch: forwarding table\n");
 		print_ftable(f_table);
@@ -413,6 +415,7 @@ while(1)
 				if(k != new_job->in_port_index){
 					#ifdef DEBUG
 					printf("switch:sending packet on port %d of %d\n", k, node_port_num);
+					printf("for host: %d\n", (int)new_job->packet->dst);
 					#endif
 					packet_send(node_port[k], new_job->packet);
 				}
@@ -421,6 +424,7 @@ while(1)
 		else {
 			#ifdef DEBUG
 			printf("switch: sending packet to host %d on port %d \n", packet_dest, find_host_in_table(f_table, packet_dest));
+			printf("for host: %d\n", (int)new_job->packet->dst);
 			#endif
 			packet_send(node_port[find_host_in_table(f_table, packet_dest)], new_job->packet);
 		}

@@ -533,7 +533,7 @@ while(1)
 	{ /* Scan all ports */
 		in_packet = (struct packet *) malloc(sizeof(struct packet));
 		n = packet_recv(node_port[k], in_packet);
-		if(flag_socket)
+		if(flag_socket && node_port[k]->type == SOCKET)
 		{
 			// -------------------------											!!!!!!!!!!!!!!!!!!!!!!!!!
 			sin_size = sizeof their_addr;
@@ -601,6 +601,7 @@ while(1)
 							printf("packet contents: length %d\n", in_packet->length);
 						#endif
 					}
+					close(new_fd);
 
 			}
 	    else
@@ -695,7 +696,7 @@ while(1)
 					new_job = (struct host_job *)
 							malloc(sizeof(struct host_job));
 					new_job->type = JOB_FILE_UPLOAD_SEND;
-					new_job->file_upload_dst = in_packet->src;
+					new_job->file_upload_dst = (int) in_packet->src; //KASEY
 						for (i=0; i < in_packet->length; i++) {
 							new_job->fname_upload[i] = in_packet->payload[i];
 						}
@@ -743,6 +744,7 @@ while(1)
 				for (k=0; k<node_port_num; k++) {
 					#ifdef DEBUG
 					printf("host %d: sending packet to port %d of %d\n",host_id, k, node_port_num);
+					printf("for host: %d\n", (int)new_job->packet->dst);
 					#endif
 					packet_send(node_port[k], new_job->packet);
 				}
@@ -867,7 +869,7 @@ while(1)
 						new_packet = (struct packet *)
 							malloc(sizeof(struct packet));
 						new_packet->dst
-							= new_job->file_upload_dst;
+							= (char) new_job->file_upload_dst;
 						new_packet->src = (char) host_id;
 						new_packet->type
 							= PKT_FILE_UPLOAD_START;
