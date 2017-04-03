@@ -21,6 +21,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <errno.h>
+#include <sys/wait.h>
 
 #include "main.h"
 #include "man.h"
@@ -30,6 +32,7 @@
 #include <netdb.h> //hostent
 #include <arpa/inet.h>
 #include <netinet/in.h>
+
 
 
 #define MAX_FILE_NAME 100
@@ -146,9 +149,8 @@ struct net_node *net_get_node_list();
  * and create another linked list.  Return the pointer to this
  * linked list.
  */
-struct net_port *net_get_port_list(int host_id)
+struct net_port * net_get_port_list(int host_id)
 {
-
 	struct net_port **p;
 	struct net_port *r;
 	struct net_port *t;
@@ -158,30 +160,36 @@ struct net_port *net_get_port_list(int host_id)
 
 	while (*p != NULL)
 	{
-		if ((*p)->pipe_host_id == host_id) {
+		if ((*p)->pipe_host_id == host_id)
+		{
 			t = *p;
 			*p = (*p)->next;
 			t->next = r;
 			r = t;
 		}
-		else {
+		else
+		{
 			p = &((*p)->next);
 		}
 	}
-
 	return r;
 }
 
 /* Return the linked list of nodes */
-struct net_node *net_get_node_list()
+struct net_node * net_get_node_list()
 {
-return g_node_list;
+	return g_node_list;
+}
+
+struct net_port * get_full_port_list()
+{
+	return g_port_list;
 }
 
 /* Return linked list of ports used by the manager to connect to hosts */
 struct man_port_at_man *net_get_man_ports_at_man_list()
 {
-return(g_man_man_port_list);
+	return(g_man_man_port_list);
 }
 
 /* Return the port used by host to link with other nodes */
@@ -365,12 +373,11 @@ void create_man_ports(
 
 }
 
-/* Create a linked list of nodes at g_node_list */
+// Create g_node_list from g_net_node[i] information
 void create_node_list()
 {
 	struct net_node *p;
 	int i;
-
 	g_node_list = NULL;
 	for (i=0; i<g_net_node_num; i++)
 	{
@@ -396,10 +403,14 @@ void create_port_list()
 	int i;
 
 	g_port_list = NULL;
+
+	printf("%d\n", g_net_link_num);
+	// printf("Creating a port list from g_net_link[i]\n");
 	for (i=0; i<g_net_link_num; i++)
 	{
 		if (g_net_link[i].type == PIPE)
 		{
+			// printf("MAKE THE PIPE\n");
 			node0 = g_net_link[i].pipe_node0;
 			node1 = g_net_link[i].pipe_node1;
 
@@ -436,89 +447,120 @@ void create_port_list()
 
 		if(g_net_link[i].type == SOCKET)
 		{
-			char *hostname;
-			int counter = 0;
-			char host[g_net_link[i].domain1size];
 
-			for(counter = 0; counter < g_net_link[i].domain1size; counter++)
-			{
-				host[counter] = g_net_link[i].domain1[counter];
+			// printf("MAKE THE SOOOOOOOOOCKET!\n");
+				int count = 0;
+				node0 = g_net_link[i].pipe_node0;
+
+				p0 = (struct net_port *) malloc(sizeof(struct net_port));
+				p0->type = g_net_link[i].type;
+				p0->pipe_host_id = node0;
+
+				for(count = 0; count < g_net_link[i].domain1size; count++)
+				{ p0->domain1[count] = g_net_link[i].domain1[count]; }
+				p0->domain1size = g_net_link[i].domain1size;
+
+				for(count = 0; count < g_net_link[i].domain2size; count++)
+				{ p0->domain2[count] = g_net_link[i].domain2[count]; }
+				p0->domain2size = g_net_link[i].domain2size;
+
+/*
+				int 		listenfd, newfd;
+				struct 	sockaddr_in 	my_addr;    // my address information
+				struct 	sockaddr_in 	their_addr; // connector's address information
+				int 		sin_size;
+				char		string_read[255];
+				int 		n, l;
+				int			last_fd;	// Thelast sockfd that is connected
+
+
+				// CREATE A SOCKET
+        if((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+				{
+            perror("socket");
+            exit(1);
+        }
+
+				char sport1[g_net_link[i].domain1size];
+				snprintf (sport1, sizeof(sport1), "%d", g_net_link[i].port1);
+				printf("%s\n", sport1);
+
+				// BIND TO ADDRESS AND PORT
+				my_addr.sin_family = AF_INET;         						// host byte order
+        my_addr.sin_port = htons(sport1);    // short, network byte order
+        my_addr.sin_addr.s_addr = INADDR_ANY; 						// auto-fill with my IP
+        bzero(&(my_addr.sin_zero), 8);        						// zero the rest of the struct
+
+        if(bind(listenfd, (struct sockaddr *)&my_addr, sizeof(struct sockaddr)) == -1)
+				{
+            perror("bind");
+            exit(1);
+        }
+
+				// LISTEN
+				if (listen(listenfd, 10) == -1)
+				{
+            perror("listen");
+            exit(1);
+        }
+
+				printf("Socket is listening\n");
+*/
+				p0->port1 = g_net_link[i].port1;
+				p0->port2 = g_net_link[i].port2;
+				p0->next = g_port_list;
+				g_port_list = p0;
+
+/*
+				// ACCEPT
+				if((newfd = accept(listenfd, (struct sockaddr *)&their_addr, &sin_size)) == -1)
+				{
+				     perror("accept");
+				}
+
+				fcntl(last_fd, F_SETFL, O_NONBLOCK); // Change the socket into non-blocking state
+				fcntl(newfd, F_SETFL, O_NONBLOCK); // Change the socket into non-blocking state
+
+
+
+				while(1)
+				{
+						for (l=listenfd; l<=last_fd; l++)
+						{
+							printf("Round number %d\n",l);
+	       			if (l = listenfd)
+							{
+						 		sin_size = sizeof(struct sockaddr_in);
+				        			if ((newfd = accept(listenfd, (struct sockaddr *)&their_addr, &sin_size)) == -1)
+											{
+				        				perror("accept");
+				        			}
+				         			printf("server: got connection from %s\n", inet_ntoa(their_addr.sin_addr));
+				    	    		fcntl(newfd, F_SETFL, O_NONBLOCK);
+								last_fd = newfd;
+							}
+							else
+							{
+					    	n=recv(newfd,string_read,sizeof(string_read),0);
+								if (n < 1)
+								{
+									perror("recv - non blocking \n");
+					    		printf("Round %d, and the data read size is: n=%d \n",i,n);
+								}
+								else
+								{
+							     string_read[n] = '\0';
+					    		 printf("The string is: %s \n",string_read);
+				           if (send(newfd, "Hello, world!\n", 14, 0) == -1)
+				           {perror("send");}
+								}
+					   }
+						}
 			}
-			hostname = host;
-			printf("%s\n", hostname);
-
-			int socket_desc;
-			struct sockaddr_in server;
-
-			// CREATE A SOCKET
-			socket_desc = socket(AF_INET, SOCK_STREAM , 0);
-			if (socket_desc == -1)
-			{ printf("Could not create socket"); }
-
-	    char ip[100];
-			char * ipp;
-	    struct hostent *he;
-	    struct in_addr **addr_list;
-	    int z;
-			char *message , server_reply[2000];
-
-	    if ((he = gethostbyname(hostname)) == NULL)
-	    {
-				printf("gethostbyname failed\n");
-				return;
-	    }
-
-	    //Cast the h_addr_list to in_addr , since h_addr_list also has the ip address in long format only
-	    addr_list = (struct in_addr **) he->h_addr_list;
-	    for(z = 0; addr_list[z] != NULL; z++)
-	    { strcpy(ip, inet_ntoa(*addr_list[z])); }
-
-	    printf("%s resolved to : %s" , hostname, ip);
-
-			// SET UP SERVER INFO
-			server.sin_addr.s_addr = ip;
-	    server.sin_family = AF_INET;
-	    server.sin_port = htons( g_net_link[i].port1 );
-
-			printf("\n%s\n", ip);
-			printf("\n%hu\n", server.sin_port);
-
-			//Connect to remote server
-	    if (connect(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0)
-	    {
-	        printf("connect error");
-	        return;
-	    }
-
-			printf("Connected\n");
-
-			/*
-	    //Send some data
-	    message = "HIIIIIIIIIIIII\n";
-	    if( send(socket_desc , message , strlen(message) , 0) < 0)
-	    {
-	        printf("Send failed");
-	        return 1;
-	    }
-
-	    printf("Data Send\n");
-			*/
-
-			/*
-	    //Receive a reply from the server
-	    if( recv(socket_desc, server_reply , 2000 , 0) < 0)
-	    {
-	        printf("recv failed");
-	    }
-	    printf("Reply received\n");
-	    printf("%s\n", server_reply);
-
-	    return 0;
 			*/
 		}
 	}
 }
-
 
 
 /*
@@ -565,11 +607,13 @@ if (node_num < 1)
 }
 else
 {
-	g_net_node =(struct net_node*) malloc(sizeof(struct net_node)*node_num);
-	for (i=0; i<node_num; i++) {
+	g_net_node = (struct net_node*) malloc(sizeof(struct net_node)*node_num);
+	for (i=0; i<node_num; i++)
+	{
 		fscanf(fp, " %c ", &node_type);
 
-		if (node_type == 'H') {
+		if (node_type == 'H')
+		{
 			printf("host node %c\n",node_type);
 			fscanf(fp, " %d ", &node_id);
 			printf("node id %d\n",node_id);
@@ -621,7 +665,7 @@ if (link_num < 1)
 }
 else
 {
-	g_net_link =(struct net_link*) malloc(sizeof(struct net_link)*link_num);
+	g_net_link = (struct net_link*) malloc(sizeof(struct net_link)*link_num);
 	for (i=0; i<link_num; i++)
 	{
 		fscanf(fp, " %c ", &link_type);
@@ -637,8 +681,12 @@ else
 		if(link_type == 'S')
 		{
 			printf("SOCKET: net.c\n");
+			printf("Putting socket info in g_net_link[i]\n");
+			g_net_link[i].type = SOCKET;
 
 			fscanf(fp," %d", &node0);
+			g_net_link[i].pipe_node0 = node0;
+
 			char c;
 			int l = 0;
 			fscanf(fp," %c", &c);
@@ -667,8 +715,6 @@ else
 
 			fscanf(fp,"%d", &port2);
 
-			g_net_link[i].type = SOCKET;
-			g_net_link[i].pipe_node0 = node0;
 			g_net_link[i].port1 = port1;
 			g_net_link[i].port2 = port2;
 		}
@@ -695,6 +741,7 @@ for (i=0; i<g_net_node_num; i++)
 	}
 }
 printf("Links:\n");
+
 for (i=0; i<g_net_link_num; i++)
 {
 	if (g_net_link[i].type == PIPE)

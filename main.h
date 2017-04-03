@@ -9,7 +9,7 @@ enum NetNodeType { /* Types of network nodes */
 	SWITCH
 };
 
-enum NetLinkType { /* Types of linkls */
+enum NetLinkType { /* Types of links */
 	PIPE,
 	SOCKET
 };
@@ -20,11 +20,20 @@ struct net_node { /* Network node, e.g., host or switch */
 	struct net_node *next;
 };
 
-struct net_port { /* port to communicate with another node */
+struct net_port
+{ /* port to communicate with another node */
 	enum NetLinkType type;
 	int pipe_host_id;
 	int pipe_send_fd;
 	int pipe_recv_fd;
+
+	int port1;
+	int port2;
+	char domain1[50];
+	int domain1size;
+	char domain2[50];
+	int domain2size;
+
 	struct net_port *next;
 };
 
@@ -45,6 +54,3 @@ struct packet { /* struct for a packet */
 #define PKT_FILE_UPLOAD_START	2
 #define PKT_FILE_UPLOAD_END	3
 #define PKT_UPLOAD_REQ	4
-
-
-
