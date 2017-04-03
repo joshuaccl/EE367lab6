@@ -102,12 +102,15 @@ void packet_send(struct net_port *port, struct packet *p)
 				freeaddrinfo(servinfo); 		// all done with this structure
 
 				// SEND MESSAGE ON SERVER
-				//send(sockfd, msg, MAX, 0);
+				if(send(sockfd, msg, MAX, 0) ==-1)
 
-				if (send(sockfd, "Hello, world!", 13, 0) == -1)
+				// if (send(sockfd, "Hello, world!", 13, 0) == -1)
 				{ perror("send"); }
 
 				printf("			Sending message with packet.c\n");
+				// for(i = 0; i < MAX; i++){
+				// 	printf("%c", msg[i]);
+				// }
 
 				close(sockfd);
 

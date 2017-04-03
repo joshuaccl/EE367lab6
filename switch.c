@@ -285,11 +285,11 @@ while(1)
 
 
 	for (k = 0; k < node_port_num; k++)
-  { /* Scan all ports */
+  	{ /* Scan all ports */
 		in_packet = (struct packet *) malloc(sizeof(struct packet));
 		n = packet_recv(node_port[k], in_packet);
 
-    if(flag_socket)
+    if(flag_socket && node_port[k]->type == SOCKET)
 		{
 			// -------------------------											!!!!!!!!!!!!!!!!!!!!!!!!!
 			sin_size = sizeof their_addr;
@@ -341,14 +341,14 @@ while(1)
             //   printf("%c", msg[d]);
             // }
 
-						// in_packet->src = (char) msg[0];
-						// in_packet->dst = (char) msg[1];
-						// in_packet->type = (char) msg[2];
-						// in_packet->length = (int) msg[3];
-						// for (d=0; d < in_packet->length; d++)
-						// {
-						// 	in_packet->payload[d] = msg[d+4];
-						// }
+						in_packet->src = (char) msg[0];
+						in_packet->dst = (char) msg[1];
+						in_packet->type = (char) msg[2];
+						in_packet->length = (int) msg[3];
+						for (d=0; d < in_packet->length; d++)
+						{
+							in_packet->payload[d] = msg[d+4];
+						}
 					}
 			}
 	    else
@@ -361,7 +361,7 @@ while(1)
 		if(n>0)
     {
 			#ifdef DEBUG
-				printf("switch:packet received from port %d of %d\n", k, node_port_num);
+				printf("switch:packet received from port %d of %d for host %d \n", k, node_port_num, in_packet->dst);
 			#endif
 			new_job = (struct host_job *)
 				malloc(sizeof(struct host_job));
@@ -371,6 +371,9 @@ while(1)
 			if(get_host_at_port(f_table, k)==-1){
 				set_src_at_port(f_table, (int) in_packet->src , k);
 					f_table_length++;
+			#ifdef DEBUG
+				printf("switch:adding to forwarding table id: %d at port %d\n", in_packet->src, k);
+			#endif
 			}
 
 			job_q_add(&job_q, new_job);
@@ -417,7 +420,7 @@ while(1)
 		}
 		else {
 			#ifdef DEBUG
-			printf("switch: sending packet to %d \n", packet_dest);
+			printf("switch: sending packet to host %d on port %d \n", packet_dest, find_host_in_table(f_table, packet_dest));
 			#endif
 			packet_send(node_port[find_host_in_table(f_table, packet_dest)], new_job->packet);
 		}

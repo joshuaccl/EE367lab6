@@ -24,7 +24,7 @@
 #include "host.h"
 #include "packet.h"
 
-//#define DEBUG
+#define DEBUG
 
 #define MAX_FILE_BUFFER 1000
 #define MAX_MSG_LENGTH 100
@@ -538,31 +538,31 @@ while(1)
 			// -------------------------											!!!!!!!!!!!!!!!!!!!!!!!!!
 			sin_size = sizeof their_addr;
 
-	    fd_set rfds;
-	    struct timeval tv;
-	    int retval;
+			fd_set rfds;
+			struct timeval tv;
+			int retval;
 
-	    /* Watch connections to see when it has input. */
-	    FD_ZERO(&rfds);
-	    FD_SET(sockfd, &rfds);
-	    /* Wait up to five seconds. */
-	    tv.tv_sec = 0.5;
-	    tv.tv_usec = 0;
-	    retval = select(sockfd+1, &rfds, NULL, NULL, &tv);
-	    /* Don’t rely on the value of tv now! */
+			/* Watch connections to see when it has input. */
+			FD_ZERO(&rfds);
+			FD_SET(sockfd, &rfds);
+			/* Wait up to five seconds. */
+			tv.tv_sec = 0.5;
+			tv.tv_usec = 0;
+			retval = select(sockfd+1, &rfds, NULL, NULL, &tv);
+			/* Don’t rely on the value of tv now! */
 
-	    if (retval == -1)
-	        perror("select()");
+			if (retval == -1)
+				perror("select()");
 
-	    else if (retval)
-	    {
+			else if (retval)
+			{
 					new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
 					if (new_fd == -1)
 					{
 						perror("accept");
 						continue;
 					}
-          fcntl(new_fd, F_SETFL, O_NONBLOCK); 		// Change the socket into non-blocking state
+         	 fcntl(new_fd, F_SETFL, O_NONBLOCK); 		// Change the socket into non-blocking state
 
 
 					inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
@@ -576,23 +576,30 @@ while(1)
 					int d;
 
 					n = recv(new_fd, msg, 100-1, 0);
-          printf("RECEIEVED:    %d\n", n);
+         	 		printf("RECEIEVED:    %d\n", n);
 
 					if(n>0)
 					{
-            for(d=0; d < n; d++)
-            {
-              printf("%c", msg[d]);
-            }
-
-						// in_packet->src = (char) msg[0];
-						// in_packet->dst = (char) msg[1];
-						// in_packet->type = (char) msg[2];
-						// in_packet->length = (int) msg[3];
-						// for (d=0; d<in_packet->length; d++)
+						// for(d=0; d < n; d++)
 						// {
-						// 	in_packet->payload[d] = msg[d+4];
+						// 	//printing packet contents
+						// printf("%c", msg[d]);
 						// }
+
+
+						in_packet->src = (char) msg[0];
+						in_packet->dst = (char) msg[1];
+						in_packet->type = (char) msg[2];
+						in_packet->length = (int) msg[3];
+						for (d=0; d<in_packet->length; d++)
+						{
+							in_packet->payload[d] = msg[d+4];
+						}
+						#ifdef DEBUG
+							printf("packet contents: src id %d\n", in_packet->src);
+							printf("packet contents: dst id %d\n", in_packet->dst);
+							printf("packet contents: length %d\n", in_packet->length);
+						#endif
 					}
 
 			}
