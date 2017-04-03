@@ -382,7 +382,7 @@ void create_node_list()
 	for (i=0; i<g_net_node_num; i++)
 	{
 		p = (struct net_node *) malloc(sizeof(struct net_node));
-		p->id = i;
+		p->id = g_net_node[i].id;
 		p->type = g_net_node[i].type;
 		p->next = g_node_list;
 		g_node_list = p;
