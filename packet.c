@@ -60,7 +60,7 @@ void packet_send(struct net_port *port, struct packet *p)
 				{
 					msg[i+4] = p->payload[i];
 				}
-
+					msg[i+p->length+5] = '\0'; //KASEY
 				// CONNECT TO SERVER
 				memset(&hints, 0, sizeof hints);
 				hints.ai_family = AF_UNSPEC;
@@ -138,6 +138,7 @@ int packet_recv(struct net_port *port, struct packet *p)
 				{
 					p->payload[i] = msg[i+4];
 				}
+				printf("packet.c: received packet for %d\n", (int)p->dst);
 			}
 		}
 

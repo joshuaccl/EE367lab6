@@ -531,8 +531,10 @@ while(1)
 
 	for (k = 0; k < node_port_num; k++)
 	{ /* Scan all ports */
+	n = 0;
 		in_packet = (struct packet *) malloc(sizeof(struct packet));
-		n = packet_recv(node_port[k], in_packet);
+		if(node_port[k]->type ==PIPE)
+			n = packet_recv(node_port[k], in_packet);
 		if(flag_socket && node_port[k]->type == SOCKET)
 		{
 			// -------------------------											!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -575,7 +577,8 @@ while(1)
 					char msg[100+4];
 					int d;
 
-					n = recv(new_fd, msg, 100-1, 0);
+					// n = recv(new_fd, msg, 100-1, 0); //KASEY
+					n = recv(new_fd, msg, 100+4, 0);
          	 		printf("RECEIEVED:    %d\n", n);
 
 					if(n>0)
@@ -596,16 +599,16 @@ while(1)
 							in_packet->payload[d] = msg[d+4];
 						}
 						#ifdef DEBUG
-							printf("packet contents: src id %d\n", in_packet->src);
-							printf("packet contents: dst id %d\n", in_packet->dst);
+							printf("packet contents: src id %d\n", (int) in_packet->src);
+							printf("packet contents: dst id %d\n", (int) in_packet->dst);
 							printf("packet contents: length %d\n", in_packet->length);
 						#endif
 					}
 					close(new_fd);
 
 			}
-	    else
-	    {}    //printf("No data within five seconds.\n");
+			else
+			{}    //printf("No data within five seconds.\n");
 
 		// -------------------------											!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -613,6 +616,7 @@ while(1)
 
 		if ((n > 0) && ((int) in_packet->dst == host_id))
 		{
+			n = 0;
 			#ifdef DEBUG
 			printf("host %d:packet received from port %d of %d\n", host_id, k, node_port_num);
 			#endif
@@ -770,7 +774,7 @@ while(1)
 				/* Create ping reply packet */
 				new_packet = (struct packet *)
 					malloc(sizeof(struct packet));
-				new_packet->dst = new_job->packet->src;
+				new_packet->dst = (char) new_job->packet->src; //KASEY
 				new_packet->src = (char) host_id;
 				new_packet->type = PKT_PING_REPLY;
 				new_packet->length = 0;
@@ -872,7 +876,7 @@ while(1)
 							= (char) new_job->file_upload_dst;
 						new_packet->src = (char) host_id;
 						new_packet->type
-							= PKT_FILE_UPLOAD_START;
+							= (char) PKT_FILE_UPLOAD_START;
 						for (i=0;
 							new_job->fname_upload[i]!= '\0';
 							i++) {
@@ -896,9 +900,9 @@ while(1)
 							new_packet2 = (struct packet *)
 								malloc(sizeof(struct packet));
 							new_packet2->dst
-								= new_job->file_upload_dst;
+								= (char) new_job->file_upload_dst;
 							new_packet2->src = (char) host_id;
-							new_packet2->type = PKT_FILE_UPLOAD_END;
+							new_packet2->type = (char) PKT_FILE_UPLOAD_END;
 
 
 							n = fread(string,sizeof(char),
@@ -911,6 +915,8 @@ while(1)
 									= string[i];
 							}
 							if(n < 100) new_packet2->payload[i]='\0';
+							else new_packet2->payload[PKT_PAYLOAD_MAX-1]='\0';
+							// new_packet2->payload[i]='\0';
 							new_packet2->length = i;
 
 							/*
@@ -924,12 +930,13 @@ while(1)
 								= JOB_SEND_PKT_ALL_PORTS;
 							new_job3->packet = new_packet2;
 
-							printf("host creating packet of file contents\n");
+							printf("host creating packet of file contents for %d payload length: %d\n", new_job->file_upload_dst, new_packet2->length);
 							job_q_add(&job_q, new_job3);
+							n = 0;
 						}
 
 					}
-					fclose(fp);
+						fclose(fp);
 						fp = NULL;
 						if(new_job->packet != NULL){
 							free(new_job->packet);

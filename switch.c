@@ -286,8 +286,10 @@ while(1)
 
 	for (k = 0; k < node_port_num; k++)
   	{ /* Scan all ports */
+	  n = 0 ;
 		in_packet = (struct packet *) malloc(sizeof(struct packet));
-		n = packet_recv(node_port[k], in_packet);
+		if(node_port[k]->type ==PIPE)
+			n = packet_recv(node_port[k], in_packet);
 
     if(flag_socket && node_port[k]->type == SOCKET)
 		{
@@ -333,37 +335,48 @@ while(1)
 					// n = recv(new_fd, msg, 100-1, 0); //KASEY
 					n = recv(new_fd, msg, 100+4, 0);
 
-          // printf("RECEIEVED:    %d\n", n);
+          printf("SWITCH RECEIEVED:    %d\n", n);
 
 					if(n>0)
 					{
-            // for(d=0; d < n; d++)
-            // {
-            //   printf("%c", msg[d]);
-            // }
+						// for(d=0; d < n; d++)
+						// {
+						//   printf("%c", msg[d]);
+						// }
 
-						in_packet->src = (char) msg[0];
-						in_packet->dst = (char) msg[1];
-						in_packet->type = (char) msg[2];
+						// in_packet->src = (char) msg[0]; //KASEY
+						// in_packet->dst = (char) msg[1];
+						// in_packet->type = (char) msg[2];
+						in_packet->src = msg[0];
+						in_packet->dst = msg[1];
+						in_packet->type = msg[2];
 						in_packet->length = (int) msg[3];
 						for (d=0; d < in_packet->length; d++)
 						{
 							in_packet->payload[d] = msg[d+4];
 						}
+						#ifdef DEBUG
+							printf("packet contents: src id %d\n", (int) in_packet->src);
+							printf("packet contents: dst id %d\n", (int) in_packet->dst);
+							printf("packet contents: length %d\n", (int) in_packet->length);
+						#endif
 					}
 					close(new_fd);
 			}
-	    else
-	    {}   //printf("No data within five seconds.\n");
+			else
+			{}   //printf("No data within five seconds.\n");
 
 		// -------------------------											!!!!!!!!!!!!!!!!!!!!!!!!!
 
 		}
 
 		if(n>0)
-    {
+   		 {
+				//reset n to 0
+				
 			#ifdef DEBUG
-				printf("switch:packet received from port %d of %d for host %d \n", k, node_port_num, (int) in_packet->dst);
+				printf("switch:packet RECEIEVED from port %d of %d for host %d \n", k, node_port_num, (int) in_packet->dst);
+				printf("packet type: %d", (int) in_packet->type);
 			#endif
 			new_job = (struct host_job *)
 				malloc(sizeof(struct host_job));
