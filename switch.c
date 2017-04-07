@@ -204,12 +204,12 @@ while(1) {
 			//host not in table
 			//send to all ports except the received port
 			
-			for (k=0; k<node_port_num; k++) {
-				if(k != new_job->in_port_index){
+			for (i=0; i<node_port_num; i++) {
+				if(i != new_job->in_port_index){
 					#ifdef DEBUG
-					printf("switch:sending packet on port %d of %d\n", k, node_port_num);
+					printf("switch:sending packet on port %d of %d\n", i, node_port_num);
 					#endif
-					packet_send(node_port[k], new_job->packet);
+					packet_send(node_port[i], new_job->packet);
 				}
 			}
 		}

@@ -587,12 +587,12 @@ else
 			printf(" net.c: Unidentified Node Type\n");
 		}
 
-		if ( (i) != node_id) {
+/*		if ( (i) != node_id) {
 			printf(" net.c: Incorrect node id\n");
 			fclose(fp);
 			return(0);
 		}
-	}
+*/	}
 }
 	/*
 	 * Read link information from the file and
