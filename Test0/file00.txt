@@ -1,0 +1,13 @@
+Graph problems pervade computer science, and algorithms for working with them
+are fundamental to the field. Hundreds of interesting computational problems are
+couched in terms of graphs. In this part, we touch on a few of the more significant
+ones.
+Chapter 22 shows how we can represent a graph in a computer and then discusses
+algorithms based on searching a graph using either breadth-first search or depthfirst
+search. The chapter gives two applications of depth-first search: topologically
+sorting a directed acyclic graph and decomposing a directed graph into its strongly
+connected components.
+Chapter 23 describes how to compute a minimum-weight spanning tree of a
+graph: the least-weight way of connecting all of the vertices together when each
+edge has an associated weight. The algorithms for computing minimum spanning
+trees serve as good examples of greedy algorithms (see Chapter 16).

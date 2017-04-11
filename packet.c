@@ -60,7 +60,6 @@ void packet_send(struct net_port *port, struct packet *p)
 				{
 					msg[i+4] = p->payload[i];
 				}
-					msg[i+p->length+5] = '\0'; //KASEY
 				// CONNECT TO SERVER
 				memset(&hints, 0, sizeof hints);
 				hints.ai_family = AF_UNSPEC;

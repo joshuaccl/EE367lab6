@@ -72,7 +72,8 @@ void *get_in_addr(struct sockaddr *sa)
 void file_buf_init(struct file_buf *f)
 {
 	f->head = 0;
-	f->tail = MAX_FILE_BUFFER;
+	// f->tail = MAX_FILE_BUFFER; //KASEYHAGI
+	f->tail = 0;
 	f->occ = 0;
 	f->name_length = 0;
 }
@@ -112,15 +113,26 @@ void file_buf_put_name(struct file_buf *f, char name[], int length)
  */
 int file_buf_add(struct file_buf *f, char string[], int length)
 {
-	int i = 0;
-
+	
+	// printf("string to write length %d starting at index %d: \n",length, f->occ);
+	int i;
+	// for(i = 0; i < length; i++){
+	// 	printf("%c",string[i]);
+	// }
+	// printf("\n 0000000000000000000000000 \n");
+i = 0;
 	while (i < length && f->occ < MAX_FILE_BUFFER)
 	{
-		f->tail = (f->tail + 1) % (MAX_FILE_BUFFER + 1);
-		f->buffer[f->tail] = string[i];
+		// f->tail = (f->tail + 1) % (MAX_FILE_BUFFER + 1); //KASEYHAGI
+		
+		f->buffer[f->occ] = string[i];
+		// printf("%c", f->buffer[f->occ]);
+		f->tail = f->tail +1;
 		i++;
 	  f->occ++;
 	}
+	f->buffer[f->occ] = '\0';
+	// printf("\n 0000000000000000000000000 \n");
 	return(i);
 }
 
@@ -279,6 +291,7 @@ int i, k, n;
 int dst;
 char name[MAX_FILE_NAME];
 char string[PKT_PAYLOAD_MAX+1];
+char buf[MAX_FILE_BUFFER];
 
 FILE *fp;
 
@@ -533,8 +546,16 @@ while(1)
 	{ /* Scan all ports */
 	n = 0;
 		in_packet = (struct packet *) malloc(sizeof(struct packet));
-		if(node_port[k]->type ==PIPE)
+		if(node_port[k]->type ==PIPE){
 			n = packet_recv(node_port[k], in_packet);
+			if(n>0){
+				printf("Packet contents:  \n");
+				for(i = 0; i < in_packet->length; i++){
+					printf("%c", in_packet->payload[i]);
+				}
+			}
+
+		}
 		if(flag_socket && node_port[k]->type == SOCKET)
 		{
 			// -------------------------											!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -602,6 +623,7 @@ while(1)
 							printf("packet contents: src id %d\n", (int) in_packet->src);
 							printf("packet contents: dst id %d\n", (int) in_packet->dst);
 							printf("packet contents: length %d\n", in_packet->length);
+							printf("packet payload: \n %s \n", in_packet->payload);
 						#endif
 					}
 					close(new_fd);
@@ -915,9 +937,7 @@ while(1)
 									= string[i];
 							}
 							if(n < 100) new_packet2->payload[i]='\0';
-							else new_packet2->payload[PKT_PAYLOAD_MAX-1]='\0';
-							// new_packet2->payload[i]='\0';
-							new_packet2->length = i;
+							new_packet2->length = n;
 
 							/*
 							* Create a job to send the packet
@@ -938,6 +958,9 @@ while(1)
 					}
 						fclose(fp);
 						fp = NULL;
+
+
+				}
 						if(new_job->packet != NULL){
 							free(new_job->packet);
 							new_job->packet = NULL;
@@ -946,8 +969,6 @@ while(1)
 							free(new_job);
 							new_job = NULL;
 						}
-
-				}
 				break;
 
 			/* The next two jobs are for the receving host */
@@ -988,6 +1009,13 @@ while(1)
 				file_buf_add(&f_buf_upload,
 					new_job->packet->payload,
 					new_job->packet->length);
+// 					printf("file buffer: \n");
+// 					for(i = 0; i < f_buf_upload.occ; i++){
+// printf("%c", f_buf_upload.buffer[i]);
+// 					}
+					
+// 					printf("\n---------?----------\n");
+
 
 				if((int) new_job->packet->length < 100){
 					if (dir_valid == 1) {
@@ -995,14 +1023,18 @@ while(1)
 						* Get file name from the file buffer
 						* Then open the file
 						*/
+						printf("file buf length: %d, tail: %d\n", f_buf_upload.occ, f_buf_upload.tail);
 						file_buf_get_name(&f_buf_upload, string);
 						n = sprintf(name, "./%s/%s", dir, string);
 						name[n] = '\0';
-						fp = fopen(name, "w+b");
+						fp = fopen(name, "w");
 
 						if (fp != NULL) {
-
-							fprintf(fp, f_buf_upload.buffer);
+							// fprintf(fp, "%s",&f_buf_upload.buffer);
+							fprintf(fp, f_buf_upload.buffer);//KASEYHAGI
+							// for(i = 0; i < f_buf_upload.occ; i++){
+							// 	fprintf(fp, "%c", f_buf_upload.buffer[i]);
+							// }
 							f_buf_upload.buffer[0]='\0';
 							memset(f_buf_upload.buffer, 0,MAX_FILE_BUFFER+1);
 
@@ -1010,6 +1042,13 @@ while(1)
 						fclose(fp);
 						fp=NULL;
 
+
+
+							printf("-----------------------\n");
+							printf("%s", f_buf_upload.buffer);
+
+					}
+				}
 						if(new_job->packet != NULL){
 							free(new_job->packet);
 							new_job->packet = NULL;
@@ -1018,12 +1057,6 @@ while(1)
 							free(new_job);
 							new_job = NULL;
 						}
-
-							printf("-----------------------\n");
-							printf("%s", f_buf_upload.buffer);
-
-					}
-				}
 				break;
 			default:
 				if(new_job->packet != NULL){
