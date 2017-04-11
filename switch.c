@@ -58,7 +58,8 @@ void *get_in_addr1(struct sockaddr *sa)
 
 void init_forwarding_table(struct forwarding table[100])
 {
-    for(int i = 0; i < 100; i++){
+	int i;
+    for(i = 0; i < 100; i++){
         table[i].port_id = i;
         table[i].valid = 0;   // initialize all invalid
         table[i].dest_id = -1; //set dest_id = -1 for undefined
@@ -79,7 +80,8 @@ int find_host_in_table(struct forwarding table[100], int host_id)
 {
     //return the port number of a host we are looking for
     //returns -1 if the host is not defined on a port
-    for(int i = 0; i < 100; i++){
+	int i;
+    for(i = 0; i < 100; i++){
         if(table[i].dest_id==host_id && table[i].valid==1)
             return i;
     }
@@ -87,7 +89,8 @@ int find_host_in_table(struct forwarding table[100], int host_id)
 }
 void print_ftable(struct forwarding table[100])
 {
-	for(int i = 0; i < 100; i++){
+	int i;
+	for(i = 0; i < 100; i++){
 		if(table[i].valid ==1)
 		printf("port: %d, hostid: %d\n", i, table[i].dest_id);
 	}
@@ -168,7 +171,7 @@ for (k = 0; k < node_port_num; k++)
 
 /* Initialize the job queue */
 job_q_init(&job_q);
-char packet_dest;
+int packet_dest;
 
 
 
@@ -183,9 +186,10 @@ char s[INET6_ADDRSTRLEN];
 int rv;
 
 int flag_socket = 0;
-p = node_port_list;
+// p = node_port_list; //KASEY1
 for (k = 0; k < node_port_num; k++)
 {
+	p = node_port[k]; //KASEY1
 	if(p->type == SOCKET)
 	{
 		// printf("It's a SOCCCCCCCKET\n");
@@ -208,41 +212,41 @@ for (k = 0; k < node_port_num; k++)
 		printf("SWITCH Port: %s\n", sport1);
 
 		if ((rv = getaddrinfo(p->domain1, sport1, &hints, &servinfo)) != 0)
-	  {
+	  	{
 			fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 			return;
 		}
 
 		// loop through all the results and bind to the first we can
 		for(ps = servinfo; ps != NULL; ps = ps->ai_next)
-	  {
-	    // Create a socket
-			if ((sockfd = socket(ps->ai_family, ps->ai_socktype, ps->ai_protocol)) == -1)
-	    {
-				perror("server: socket");
-				continue;
-			}
+	  	{
+			// Create a socket
+				if ((sockfd = socket(ps->ai_family, ps->ai_socktype, ps->ai_protocol)) == -1)
+				{
+					perror("server: socket");
+					continue;
+				}
 
-      fcntl(sockfd, F_SETFL, O_NONBLOCK); 		// Change the socket into non-blocking state
+		fcntl(sockfd, F_SETFL, O_NONBLOCK); 		// Change the socket into non-blocking state
 
-			if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
-	    {
-				perror("setsockopt");
-				exit(1);
-			}
+				if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
+				{
+					perror("setsockopt");
+					exit(1);
+				}
 
-	    // Bind socket
-			if (bind(sockfd, ps->ai_addr, ps->ai_addrlen) == -1)
-	    {
-				close(sockfd);
-				perror("server: bind");
-				continue;
-			}
-			break;
+			// Bind socket
+				if (bind(sockfd, ps->ai_addr, ps->ai_addrlen) == -1)
+				{
+					close(sockfd);
+					perror("server: bind");
+					continue;
+				}
+				break;
 		}
 
 		if (ps == NULL)
-	  {
+	  	{
 			fprintf(stderr, "server: failed to bind\n");
 			return;
 		}
@@ -251,7 +255,7 @@ for (k = 0; k < node_port_num; k++)
 
 		// LISTEN
 		if (listen(sockfd, BACKLOG) == -1)
-	  {
+	  	{
 			perror("listen");
 			exit(1);
 		}
@@ -260,7 +264,7 @@ for (k = 0; k < node_port_num; k++)
 		sigemptyset(&sa.sa_mask);
 		sa.sa_flags = SA_RESTART;
 		if (sigaction(SIGCHLD, &sa, NULL) == -1)
-	  {
+	  	{
 			perror("sigaction");
 			exit(1);
 		}
@@ -270,7 +274,7 @@ for (k = 0; k < node_port_num; k++)
 		// -------------------------------- SERVER SETUP DONE
 
 	}
-	p = p->next;
+	// p = p->next; //KASEY1
 }
 
 
@@ -286,12 +290,12 @@ while(1)
 
 	for (k = 0; k < node_port_num; k++)
   	{ /* Scan all ports */
-	  n = 0 ;
+	 	 n = 0 ;
 		in_packet = (struct packet *) malloc(sizeof(struct packet));
 		if(node_port[k]->type ==PIPE)
 			n = packet_recv(node_port[k], in_packet);
 
-    if(flag_socket && node_port[k]->type == SOCKET)
+    	if(flag_socket && node_port[k]->type == SOCKET)
 		{
 			// -------------------------											!!!!!!!!!!!!!!!!!!!!!!!!!
 			sin_size = sizeof their_addr;
@@ -335,7 +339,7 @@ while(1)
 					// n = recv(new_fd, msg, 100-1, 0); //KASEY
 					n = recv(new_fd, msg, 100+4, 0);
 
-          printf("SWITCH RECEIEVED:    %d\n", n);
+         			 printf("SWITCH RECEIEVED:    %d\n", n);
 
 					if(n>0)
 					{
@@ -344,12 +348,10 @@ while(1)
 						//   printf("%c", msg[d]);
 						// }
 
-						// in_packet->src = (char) msg[0]; //KASEY
-						// in_packet->dst = (char) msg[1];
-						// in_packet->type = (char) msg[2];
-						in_packet->src = msg[0];
-						in_packet->dst = msg[1];
-						in_packet->type = msg[2];
+						in_packet->src = (char) msg[0]; //KASEY
+						in_packet->dst = (char) msg[1];
+						in_packet->type = (char) msg[2];
+		
 						in_packet->length = (int) msg[3];
 						for (d=0; d < in_packet->length; d++)
 						{
@@ -372,7 +374,6 @@ while(1)
 
 		if(n>0)
    		 {
-				//reset n to 0
 				
 			#ifdef DEBUG
 				printf("switch:packet RECEIEVED from port %d of %d for host %d \n", k, node_port_num, (int) in_packet->dst);
@@ -405,44 +406,44 @@ while(1)
 	/*
  	 * Execute one job in the job queue
  	 */
-
+	  }
 	if (job_q_num(&job_q) > 0) {
 
 		/* Get a new job from the job queue */
 		new_job = job_q_remove(&job_q);
 
 		// int i=0;
-		packet_dest = new_job->packet->dst;
+		packet_dest = (int) new_job->packet->dst;
 		#ifdef DEBUG
 		printf("switch: forwarding table\n");
 		print_ftable(f_table);
 		#endif
 
 		if(find_host_in_table(f_table, packet_dest)==-1)
-    {
+    	{
 			//host not in table
 			//send to all ports except the received port
 
-			for (k=0; k<node_port_num; k++)
-      {
-				if(k != new_job->in_port_index){
+			for(i=0; i<node_port_num; i++)
+     		 {
+				if(i != new_job->in_port_index){
 					#ifdef DEBUG
-					printf("switch:sending packet on port %d of %d\n", k, node_port_num);
+					printf("switch:sending packet on port %d of %d\n", i, node_port_num);
 					printf("for host: %d\n", (int)new_job->packet->dst);
 					#endif
-					packet_send(node_port[k], new_job->packet);
+					packet_send(node_port[i], new_job->packet);
 				}
 			}
 		}
 		else {
 			#ifdef DEBUG
-			printf("switch: sending packet to host %d on port %d \n", packet_dest, find_host_in_table(f_table, packet_dest));
+			printf("switch: sending packet to host %d on port %d \n",  packet_dest, find_host_in_table(f_table, packet_dest));
 			printf("for host: %d\n", (int)new_job->packet->dst);
 			#endif
-			packet_send(node_port[find_host_in_table(f_table, packet_dest)], new_job->packet);
+			packet_send(node_port[find_host_in_table(f_table,  packet_dest)], new_job->packet);
 		}
 
-    if(new_job->packet != NULL){
+    	if(new_job->packet != NULL){
 			free(new_job->packet);
 			new_job->packet = NULL;
 		}
@@ -463,4 +464,4 @@ while(1)
 } /* End of while loop */
 
 }
-}
+
