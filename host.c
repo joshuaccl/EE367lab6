@@ -72,7 +72,6 @@ void *get_in_addr(struct sockaddr *sa)
 void file_buf_init(struct file_buf *f)
 {
 	f->head = 0;
-	// f->tail = MAX_FILE_BUFFER; //KASEYHAGI
 	f->tail = 0;
 	f->occ = 0;
 	f->name_length = 0;
@@ -114,25 +113,17 @@ void file_buf_put_name(struct file_buf *f, char name[], int length)
 int file_buf_add(struct file_buf *f, char string[], int length)
 {
 	
-	// printf("string to write length %d starting at index %d: \n",length, f->occ);
-	int i;
-	// for(i = 0; i < length; i++){
-	// 	printf("%c",string[i]);
-	// }
-	// printf("\n 0000000000000000000000000 \n");
-i = 0;
+	int i = 0;
 	while (i < length && f->occ < MAX_FILE_BUFFER)
 	{
-		// f->tail = (f->tail + 1) % (MAX_FILE_BUFFER + 1); //KASEYHAGI
+
 		
 		f->buffer[f->occ] = string[i];
-		// printf("%c", f->buffer[f->occ]);
 		f->tail = f->tail +1;
 		i++;
 	  f->occ++;
 	}
 	f->buffer[f->occ] = '\0';
-	// printf("\n 0000000000000000000000000 \n");
 	return(i);
 }
 
@@ -589,27 +580,16 @@ while(1)
 
 
 					inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
-					//printf("HOST SERVER: got connection from %s\n", s);
-
-
-          // if(send(new_fd, "Hello, world!", 13, 0) == -1)
-          // { perror("send"); }
 
 					char msg[100+4];
 					int d;
 
-					// n = recv(new_fd, msg, 100-1, 0); //KASEY
+
 					n = recv(new_fd, msg, 100+4, 0);
          	 		printf("RECEIEVED:    %d\n", n);
 
 					if(n>0)
 					{
-						// for(d=0; d < n; d++)
-						// {
-						// 	//printing packet contents
-						// printf("%c", msg[d]);
-						// }
-
 
 						in_packet->src = (char) msg[0];
 						in_packet->dst = (char) msg[1];
@@ -819,8 +799,7 @@ while(1)
 					free(new_job);
 					new_job = NULL;
 				}
-				// free(new_job->packet);
-				// free(new_job);
+
 				break;
 
 			case JOB_PING_WAIT_FOR_REPLY:
@@ -832,10 +811,8 @@ while(1)
 
 				if (ping_reply_received == 1) {
 					n = sprintf(man_reply_msg, "Ping acked!");
-					// man_reply_msg[n] = '\0';
-					// write(man_port->send_fd, man_reply_msg, n+1);
+
 					write(man_port->send_fd, man_reply_msg, n);
-					// free(new_job);
 					if(new_job->packet != NULL){
 						free(new_job->packet);
 						new_job->packet = NULL;
@@ -851,8 +828,7 @@ while(1)
 				}
 				else { /* Time out */
 					n = sprintf(man_reply_msg, "Ping time out!");
-					// man_reply_msg[n] = '\0';
-					// write(man_port->send_fd, man_reply_msg, n+1);
+
 					write(man_port->send_fd, man_reply_msg, n);
 					if(new_job->packet != NULL){
 						free(new_job->packet);
@@ -862,7 +838,6 @@ while(1)
 						free(new_job);
 						new_job = NULL;
 					}
-					// free(new_job);
 				}
 
 				break;
@@ -874,7 +849,6 @@ while(1)
 			case JOB_FILE_UPLOAD_SEND:
 			#ifdef DEBUG
 			printf("host %d: JOB_FILE_UPLOAD_SEND \n", host_id);
-			// printf("dir_valie: %d\n", dir_valid);
 			#endif
 				/* Open file */
 				if (dir_valid == 1) {
@@ -1009,12 +983,7 @@ while(1)
 				file_buf_add(&f_buf_upload,
 					new_job->packet->payload,
 					new_job->packet->length);
-// 					printf("file buffer: \n");
-// 					for(i = 0; i < f_buf_upload.occ; i++){
-// printf("%c", f_buf_upload.buffer[i]);
-// 					}
-					
-// 					printf("\n---------?----------\n");
+
 
 
 				if((int) new_job->packet->length < 100){
@@ -1030,11 +999,7 @@ while(1)
 						fp = fopen(name, "w");
 
 						if (fp != NULL) {
-							// fprintf(fp, "%s",&f_buf_upload.buffer);
-							fprintf(fp, f_buf_upload.buffer);//KASEYHAGI
-							// for(i = 0; i < f_buf_upload.occ; i++){
-							// 	fprintf(fp, "%c", f_buf_upload.buffer[i]);
-							// }
+							fprintf(fp, f_buf_upload.buffer);
 							f_buf_upload.buffer[0]='\0';
 							memset(f_buf_upload.buffer, 0,MAX_FILE_BUFFER+1);
 
