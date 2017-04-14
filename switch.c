@@ -186,10 +186,9 @@ char s[INET6_ADDRSTRLEN];
 int rv;
 
 int flag_socket = 0;
-// p = node_port_list; //KASEY1
 for (k = 0; k < node_port_num; k++)
 {
-	p = node_port[k]; //KASEY1
+	p = node_port[k]; 
 	if(p->type == SOCKET)
 	{
 		// printf("It's a SOCCCCCCCKET\n");
@@ -274,7 +273,6 @@ for (k = 0; k < node_port_num; k++)
 		// -------------------------------- SERVER SETUP DONE
 
 	}
-	// p = p->next; //KASEY1
 }
 
 
@@ -328,27 +326,20 @@ while(1)
 
 
 					inet_ntop(their_addr.ss_family, get_in_addr1((struct sockaddr *)&their_addr), s, sizeof s);
-					//printf("SWITCH SERVER: got connection from %s\n", s);
 
-          // if(send(new_fd, "Hello, world!", 13, 0) == -1)
-          // { perror("send"); }
 
 					char msg[100+4];
 					int d;
 
-					// n = recv(new_fd, msg, 100-1, 0); //KASEY
 					n = recv(new_fd, msg, 100+4, 0);
 
          			 printf("SWITCH RECEIEVED:    %d\n", n);
 
 					if(n>0)
 					{
-						// for(d=0; d < n; d++)
-						// {
-						//   printf("%c", msg[d]);
-						// }
 
-						in_packet->src = (char) msg[0]; //KASEY
+
+						in_packet->src = (char) msg[0]; 
 						in_packet->dst = (char) msg[1];
 						in_packet->type = (char) msg[2];
 		
@@ -373,7 +364,7 @@ while(1)
 		}
 
 		if(n>0)
-   		 {
+		{
 				
 			#ifdef DEBUG
 				printf("switch:packet RECEIEVED from port %d of %d for host %d \n", k, node_port_num, (int) in_packet->dst);
@@ -402,11 +393,11 @@ while(1)
 
 		}
 
-
+	}
 	/*
  	 * Execute one job in the job queue
  	 */
-	  }
+	  
 	if (job_q_num(&job_q) > 0) {
 
 		/* Get a new job from the job queue */
