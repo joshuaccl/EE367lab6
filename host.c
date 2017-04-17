@@ -439,7 +439,16 @@ for (k = 0; k < node_port_num; k++)
 	}
 	p = p->next;
 }
-
+/* initialize tree variables */
+int local_root_id = host_id;
+int local_root_dist = 0;
+int local_parent = -1;
+int local_port_tree[node_port_num];
+//initialize local_port_tree
+for(i = 0; i < node_port_num; i++){
+	local_port_tree[i]=1;
+}
+int send_tree_pkt = 0;
 while(1)
 {
 	/* Execute command from manager, if any */
@@ -539,12 +548,14 @@ while(1)
 		in_packet = (struct packet *) malloc(sizeof(struct packet));
 		if(node_port[k]->type ==PIPE){
 			n = packet_recv(node_port[k], in_packet);
-			if(n>0){
-				printf("Packet contents:  \n");
-				for(i = 0; i < in_packet->length; i++){
-					printf("%c", in_packet->payload[i]);
-				}
-			}
+			#ifdef DEBUG
+			// if(n>0){
+			// 	printf("Packet contents:  \n");
+			// 	for(i = 0; i < in_packet->length; i++){
+			// 		printf("%c", in_packet->payload[i]);
+			// 	}
+			// }
+			#endif
 
 		}
 		if(flag_socket && node_port[k]->type == SOCKET)
@@ -615,8 +626,26 @@ while(1)
 		// -------------------------											!!!!!!!!!!!!!!!!!!!!!!!!!
 
 		}
+		if ((n > 0) && (in_packet->type == (char)PKT_TREE)){
+				/* RECEIVE TREE PACKET */
+				// payload[0] packetRootID
+				// payload[1] packetRootDist
+				// payload[2] packetSenderType
+				// payload[3] packetSenderChild
+				if(in_packet->payload[2]=='S'){
+						local_root_id =	(int)in_packet->payload[0];
+						local_parent = k;
+						local_root_dist = (int)in_packet->payload[1] +1;
+						local_port_tree[k] = 1;
+				}
+				else local_port_tree[k]=0;
 
-		if ((n > 0) && ((int) in_packet->dst == host_id))
+			if(in_packet!= NULL){
+					free(in_packet);
+					in_packet = NULL;
+				}
+		}
+		else if ((n > 0) && ((int) in_packet->dst == host_id))
 		{
 			n = 0;
 			#ifdef DEBUG
@@ -708,8 +737,10 @@ while(1)
 						}
 					new_job->fname_upload[i] = '\0';
 					new_job->packet= NULL;
+					#ifdef DEBUG
 					printf("host %d: filename -%s- to src: %d \n", host_id, new_job->fname_upload,
 						(int)in_packet->src);
+					#endif
 					job_q_add(&job_q, new_job);
 
 					break;
@@ -723,10 +754,22 @@ while(1)
 			}
 
 		}
+
 		else {
-			if(in_packet!= NULL){
+			if(send_tree_pkt > 10){
+			
+				new_job = (struct host_job *)
+					malloc(sizeof(struct host_job));
+				new_job->type = JOB_SEND_TREE_PKT;	
+				new_job->packet = in_packet;
+				
+				job_q_add(&job_q, new_job);
+				send_tree_pkt = 0;
+
+			}
+			else if(in_packet!= NULL){
 				free(in_packet);
-				in_packet = NULL;
+				in_packet=NULL;
 			}
 
 		}
@@ -747,12 +790,14 @@ while(1)
 
 			/* Send packets on all ports */
 			case JOB_SEND_PKT_ALL_PORTS:
+				//this actually sends packets on only tree ports 
 				for (k=0; k<node_port_num; k++) {
-					#ifdef DEBUG
-					printf("host %d: sending packet to port %d of %d\n",host_id, k, node_port_num);
-					printf("for host: %d\n", (int)new_job->packet->dst);
-					#endif
-					packet_send(node_port[k], new_job->packet);
+					if(local_port_tree[k]==1){
+						#ifdef DEBUG
+						printf("host %d: sending packet to port %d of %d\n",host_id, k, node_port_num);
+						#endif
+						packet_send(node_port[k], new_job->packet);
+					}
 				}
 				if(new_job->packet != NULL){
 					free(new_job->packet);
@@ -763,6 +808,31 @@ while(1)
 					new_job = NULL;
 				}
 
+				break;
+			case JOB_SEND_TREE_PKT:
+			//tree packets go on all ports
+				for (k=0; k<node_port_num; k++) {
+						new_job->packet->src = (char) host_id;
+						new_job->packet->dst = (char) 0;
+						new_job->packet->type = (char) PKT_TREE;
+						new_job->packet->length = 4;
+						new_job->packet->payload[0] = (char) local_root_id;
+						new_job->packet->payload[1] = (char) local_root_dist;
+						new_job->packet->payload[2] = 'H'; //packetSenderType
+						new_job->packet->payload[3] = 'Y'; //packetSenderChild
+						#ifdef DEBUGTREE
+							printf("host %d: local root %d  \n", host_id, local_root_id);
+						#endif
+						packet_send(node_port[k], new_job->packet);
+				}
+				if(new_job->packet != NULL){
+					free(new_job->packet);
+					new_job->packet = NULL;
+				}
+				if(new_job != NULL){
+					free(new_job);
+					new_job = NULL;
+				}
 				break;
 
 			/* The next three jobs deal with the pinging process */
@@ -1039,10 +1109,10 @@ while(1)
 
 
 
-
+	send_tree_pkt++;
 	// The host goes to sleep for 10 ms
 	usleep(TENMILLISEC);
-
+	
 } // End of while loop
 
 }

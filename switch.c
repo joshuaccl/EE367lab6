@@ -25,6 +25,7 @@
 #include "packet.h"
 #include "switch.h"
 #define DEBUG
+
 #define BACKLOG 10
 
 #define MAX_FILE_BUFFER 1000
@@ -275,8 +276,15 @@ for (k = 0; k < node_port_num; k++)
 	}
 }
 
-
-
+/* initialize tree variables */
+int local_root_id = host_id;
+int local_root_dist = 0;
+int local_parent = -1; //port number of parent
+int local_port_tree[node_port_num];
+for(i = 0; i < node_port_num; i++){
+	local_port_tree[i]=1;
+}
+int send_tree_pkt = 0;
 while(1)
 {
 
@@ -333,7 +341,9 @@ while(1)
 
 					n = recv(new_fd, msg, 100+4, 0);
 
+					#ifdef DEBUG
          			 printf("SWITCH RECEIEVED:    %d\n", n);
+					  #endif
 
 					if(n>0)
 					{
@@ -367,26 +377,89 @@ while(1)
 		{
 				
 			#ifdef DEBUG
-				printf("switch:packet RECEIEVED from port %d of %d for host %d \n", k, node_port_num, (int) in_packet->dst);
-				printf("packet type: %d", (int) in_packet->type);
+				// printf("switch:packet RECEIEVED from port %d of %d for host %d \n", k, node_port_num, (int) in_packet->dst);
+				// printf("packet type: %d", (int) in_packet->type);
 			#endif
 			new_job = (struct host_job *)
 				malloc(sizeof(struct host_job));
 			new_job->in_port_index = k;
 			new_job->packet = in_packet;
 
+			//add to forwarding table 
 			if(get_host_at_port(f_table, k)==-1){
 				set_src_at_port(f_table, (int) in_packet->src , k);
 					f_table_length++;
-			#ifdef DEBUG
-				printf("switch:adding to forwarding table id: %d at port %d\n", in_packet->src, k);
-			#endif
+				#ifdef DEBUG
+					// printf("switch:adding to forwarding table id: %d at port %d\n", in_packet->src, k);
+				#endif
 			}
 
-			job_q_add(&job_q, new_job);
+			if(in_packet->type == (char)PKT_TREE){
+				/* RECEIVE TREE PACKET */
+				// payload[0] packetRootID
+				// payload[1] packetRootDist
+				// payload[2] packetSenderType
+				// payload[3] packetSenderChild
+				if(in_packet->payload[2]=='S'){
+					if((int)in_packet->payload[0] < local_root_id){ 
+						//found a better root
+						local_root_id =	(int)in_packet->payload[0];
+						local_parent = k;
+						local_root_dist = (int)in_packet->payload[1] +1;
+					}
+					else if((int)in_packet->payload[0] == local_root_id){
+						//same root
+						if(local_root_dist > (int)in_packet->payload[1] +1){
+							local_parent = k;
+							local_root_dist = (int)in_packet->payload[1] +1;
+						}
+					}
+					if(local_parent==k){
+						local_port_tree[k] = 1;
+					}
+					else if(in_packet->payload[3]=='Y'){
+						//this is a child so we need that port in the tree
+						local_port_tree[k] = 1;
+					}
+					else local_port_tree[k]=0;
+				}
+				else if(in_packet->payload[2]=='H'){
+					local_port_tree[k] = 1;
+				}
+				else {
+					local_port_tree[k]=0;
+				}
+				
+
+
+				if(in_packet!= NULL){
+					free(in_packet);
+					in_packet=NULL;
+				}
+			}
+			else {
+				#ifdef DEBUG 
+
+				printf("switch %d: parent %d \n", host_id, get_host_at_port(f_table, local_parent));
+				printf("switch %d: received packet from %d\n", host_id, (int)in_packet->src);
+				#endif
+				new_job->type = JOB_SEND_PKT_ALL_PORTS;
+				job_q_add(&job_q, new_job);
+			}
+
+
 		}
 		else {
-			if(in_packet!= NULL){
+			if(send_tree_pkt > 10){
+				new_job = (struct host_job *)
+					malloc(sizeof(struct host_job));
+				new_job->type = JOB_SEND_TREE_PKT;	
+				new_job->packet = in_packet;
+				
+				job_q_add(&job_q, new_job);
+				send_tree_pkt = 0;
+			}
+			else if(in_packet!= NULL){
 				free(in_packet);
 				in_packet=NULL;
 			}
@@ -403,36 +476,61 @@ while(1)
 		/* Get a new job from the job queue */
 		new_job = job_q_remove(&job_q);
 
-		// int i=0;
-		packet_dest = (int) new_job->packet->dst;
-		#ifdef DEBUG
-		printf("switch: forwarding table\n");
-		print_ftable(f_table);
-		#endif
+		switch(new_job->type){
+			case JOB_SEND_PKT_ALL_PORTS:
+				packet_dest = (int) new_job->packet->dst;
+				#ifdef DEBUG
+				// printf("switch: forwarding table\n");
+				// print_ftable(f_table);
+				#endif
 
-		if(find_host_in_table(f_table, packet_dest)==-1)
-    	{
-			//host not in table
-			//send to all ports except the received port
+				if(find_host_in_table(f_table, packet_dest)==-1)
+				{
+					//host not in table
+					//send to all ports except the received port
 
-			for(i=0; i<node_port_num; i++)
-     		 {
-				if(i != new_job->in_port_index){
-					#ifdef DEBUG
-					printf("switch:sending packet on port %d of %d\n", i, node_port_num);
-					printf("for host: %d\n", (int)new_job->packet->dst);
-					#endif
-					packet_send(node_port[i], new_job->packet);
+					for(i=0; i<node_port_num; i++)
+					{
+						if(i != new_job->in_port_index && local_port_tree[i]==1){
+							#ifdef DEBUGGY
+							printf("switch %d:sending packet on port %d \n",host_id,	 i);
+							// printf("for host: %d\n", (int)new_job->packet->dst);
+							#endif
+							packet_send(node_port[i], new_job->packet);
+						}
+						if(local_port_tree[i]==0)
+						printf("switch %d: port %d closed to %d \n",host_id,i,
+							get_host_at_port(f_table,i));
+					}
 				}
-			}
+				else {
+					#ifdef DEBUG
+					printf("switch %d: sending packet to host %d on port %d \n", host_id, 
+							packet_dest, find_host_in_table(f_table, packet_dest));
+					// printf("for host: %d\n", (int)new_job->packet->dst);
+					#endif
+					packet_send(node_port[find_host_in_table(f_table,  packet_dest)], new_job->packet);
+				}
+			break;
+			case JOB_SEND_TREE_PKT:
+					for(i=0; i<node_port_num; i++)
+					{
+							new_job->packet->src = (char) host_id;
+							new_job->packet->dst = (char) 0;
+							new_job->packet->type = (char) PKT_TREE;
+							new_job->packet->length = 4;
+							new_job->packet->payload[0] = (char) local_root_id;
+							new_job->packet->payload[1] = (char) local_root_dist;
+							new_job->packet->payload[2] = 'S'; //packetSenderType
+							new_job->packet->payload[3] = (i == local_parent)? 'Y' : 'N'; //packetSenderChild
+							#ifdef DEBUGTREE
+							printf("switch %d: local root %d  \n", host_id, local_root_id);
+							#endif
+							packet_send(node_port[i], new_job->packet);
+					}
+			break;
 		}
-		else {
-			#ifdef DEBUG
-			printf("switch: sending packet to host %d on port %d \n",  packet_dest, find_host_in_table(f_table, packet_dest));
-			printf("for host: %d\n", (int)new_job->packet->dst);
-			#endif
-			packet_send(node_port[find_host_in_table(f_table,  packet_dest)], new_job->packet);
-		}
+
 
     	if(new_job->packet != NULL){
 			free(new_job->packet);
@@ -448,7 +546,7 @@ while(1)
 
 
 
-
+	send_tree_pkt ++;
 	/* The host goes to sleep for 10 ms */
 	usleep(TENMILLISEC);
 

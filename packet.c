@@ -106,7 +106,7 @@ void packet_send(struct net_port *port, struct packet *p)
 				// if (send(sockfd, "Hello, world!", 13, 0) == -1)
 				{ perror("send"); }
 
-				printf("			Sending message with packet.c\n");
+				// printf("			Sending message with packet.c\n");
 				memset(msg, 0,MAX+4);
 				// for(i = 0; i < MAX; i++){
 				// 	printf("%c", msg[i]);
@@ -137,7 +137,7 @@ int packet_recv(struct net_port *port, struct packet *p)
 				{
 					p->payload[i] = msg[i+4];
 				}
-				printf("packet.c: received packet for %d\n", (int)p->dst);
+				// printf("packet.c: received packet for %d\n", (int)p->dst);
 			}
 		}
 
