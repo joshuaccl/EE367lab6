@@ -47,6 +47,8 @@ while(1) {
 	printf("   (p) Ping a host\n");
 	printf("   (u) Upload a file to a host\n");
 	printf("   (d) Download a file from a host\n");
+	printf("   (r) Register the domain name of current node\n");
+	printf("   (f) Find the id of a domain name\n");
 	printf("   (q) Quit\n");
 	printf("   Enter Command: ");
 	do {
@@ -196,6 +198,53 @@ printf("%s\n",reply);
  *    -  id of the destination host 
  *    -  name of file to transfer
  */
+int register_name(struct man_port_at_man *curr_host)
+{
+int n;
+int host_id;
+char name[NAME_LENGTH];
+char msg[NAME_LENGTH];
+char reply[MAN_MSG_LENGTH];
+
+printf("Enter new name for this host: ");
+scanf("%s",name);
+printf("\n");
+
+n=sprintf(msg, "r %s", name);
+write(curr_host->send_fd, msg, n);
+
+n=0;
+while(n<=0) {
+	usleep(TENMILLISEC);
+	n=read(curr_host->recv_fd, reply, MAN_MSG_LENGTH);
+	}
+reply[n] = '\0';
+printf("%s\n",reply);	
+}
+
+int find_host_id(struct man_port_at_man *curr_host)
+{
+int n;
+int host_id;
+char name[NAME_LENGTH];
+char msg[NAME_LENGTH];
+char reply[MAN_MSG_LENGTH];
+
+printf("Enter the name of the id you want to find: ");
+scanf("%s",name);
+printf("\n");
+n=sprintf(msg, "f %s",name);
+write(curr_host->send_fd, msg, n);
+
+n=0;
+whild(n<=0) {
+	usleep(TENMILLISEC);
+	n=read(curr_host->recv_fd, reply, MAN_MSG_LENGTH);
+	}
+reply[n] = '\0';
+printf("%s\n",reply);
+}
+
 int file_upload(struct man_port_at_man *curr_host)
 {
 int n;
@@ -279,7 +328,13 @@ while(1) {
 			// printf("This command is not implemented\n");
 			file_download(curr_host);
 			break;
-		case 'q':  /* Quit */
+		case 'r': /* Register the host id */
+			register_name(curr_host);
+			break;
+		case 'f': /* Find the host id */
+			find_host_id(curr_host);
+			break;
+		case 'q': /*quit*/
 			return;
 		default: 
 			printf("\nInvalid, you entered %c\n\n", cmd);
