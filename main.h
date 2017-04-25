@@ -6,7 +6,8 @@
 
 enum NetNodeType { /* Types of network nodes */
 	HOST,
-	SWITCH
+	SWITCH,
+	DNS
 };
 
 enum NetLinkType { /* Types of links */
@@ -54,3 +55,7 @@ struct packet { /* struct for a packet */
 #define PKT_FILE_UPLOAD_START	2
 #define PKT_FILE_UPLOAD_END	3
 #define PKT_UPLOAD_REQ	4
+#define PKT_REG_REQ 5
+#define PKT_REG_REPLY 6
+#define PKT_FIND_REQ 7
+#define PKT_FIND_REPLY 8

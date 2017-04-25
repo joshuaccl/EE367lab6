@@ -21,9 +21,9 @@
 #include "main.h"
 #include "net.h"
 #include "man.h"
-#include "host.h"
 #include "packet.h"
-#include "switch.h"
+#include "host.h"
+#include "dns.h"
 #define DEBUG
 #define BACKLOG 10
 
@@ -38,16 +38,16 @@ struct naming
 {
     int id;
     int empty; //if 1 then it is empty, if 0 it is filled
-    char[50] name;
+    char name[50];
 };
 
-void sigchld_handler1(int s)
+void sigchld_handler2(int s)
 {
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
 // get sockaddr, IPv4 or IPv6:
-void *get_in_addr1(struct sockaddr *sa)
+void *get_in_addr2(struct sockaddr *sa)
 {
 	if (sa->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*)sa)->sin_addr);
@@ -64,13 +64,16 @@ void init_naming_table(struct naming table[255])
 	}
 }
 
-int add_naming_table(struct naming table[255], char[50] name, int id)
+int add_naming_table(struct naming table[255], char name[50], int id)
 {
     //Find the first empty entry
     for(int i=0; i<255; i++){
 	if(table[i].empty==1) //if we're empty add the entry
 	{
-		table[i].name=name;
+		for(int j=0; i<50; j++){
+			table[i].name[j]=name[j];
+		}
+
 		table[i].id=id;
 		table[i].empty=0;
 		return 1;
@@ -79,7 +82,7 @@ int add_naming_table(struct naming table[255], char[50] name, int id)
 	return -1;
 }
 
-int find_host_in_table(struct naming table[255], char[50] name)
+int find_name_in_table(struct naming table[255], char name[50])
 {
     //return the port number of a host we are looking for
     //returns -1 if the host is not defined on a port
@@ -103,7 +106,7 @@ void print_ntable(struct naming table[255])
  *  Main
  */
 
-void dns_main(void)
+void dns_main(int host_id)
 {
 
 /* State */
@@ -123,6 +126,7 @@ int ping_reply_received;
 
 int i, k, n;
 int dst;
+char dns[50];
 char name[MAX_FILE_NAME];
 char string[PKT_PAYLOAD_MAX+1];
 
@@ -147,7 +151,6 @@ int n_table_length = 0;
  * Get link port to the manager
  */
 
-man_port = net_get_host_port(host_id);
 
 
 /* Create an array node_port[ ] to store the network link ports
@@ -262,7 +265,7 @@ for (k = 0; k < node_port_num; k++)
 			exit(1);
 		}
 
-		sa.sa_handler = sigchld_handler1; // reap all dead processes
+		sa.sa_handler = sigchld_handler2; // reap all dead processes
 		sigemptyset(&sa.sa_mask);
 		sa.sa_flags = SA_RESTART;
 		if (sigaction(SIGCHLD, &sa, NULL) == -1)
@@ -336,7 +339,7 @@ while(1)
 
 					n = recv(new_fd, msg, 100+4, 0);
 
-         			 printf("SWITCH RECEIEVED:    %d\n", n);
+         			 printf("DNS SERVER RECEIEVED:    %d\n", n);
 
 					if(n>0)
 					{
@@ -364,9 +367,46 @@ while(1)
 
 		// -------------------------											!!!!!!!!!!!!!!!!!!!!!!!!!
 
-		
+		}
 
-	
+		if((n>0) && ((int) in_packet->dst == host_id))
+		{
+			n=0;
+			new_job = (struct host_job *)
+					malloc(sizeof(struct host_job));
+			new_job->in_port_index = k;
+			new_job->packet = in_packet;
+			switch(in_packet->type)
+			{
+				case (char) PKT_REG_REQ:
+				new_job->type = JOB_REG_WAIT_FOR_REPLY;
+				job_q_add(&job_q, new_job);
+				#ifdef DEBUG
+				printf("DNS SERVER received PKT_REG_REQ\n");
+				#endif
+				break;
+				
+				case (char) PKT_FIND_REQ:
+				new_job->type = JOB_FIND_WAIT_FOR_REPLY;
+				job_q_add(&job_q, new_job);
+				break;
+				
+				default:
+					if(new_job!=NULL){
+						free(new_job);
+						new_job=NULL;
+					}
+					break;
+			}
+		}
+		else {
+			if(in_packet!=NULL){
+				free(in_packet);
+				in_packet = NULL;
+			}
+		}
+	}
+				
 	/*
  	 * Execute one job in the job queue
  	 */
@@ -376,48 +416,56 @@ while(1)
 		/* Get a new job from the job queue */
 		new_job = job_q_remove(&job_q);
 
-		// int i=0;
-		packet_dest = (int) new_job->packet->dst;
-		#ifdef DEBUG
-		printf("switch: forwarding table\n");
-		print_ntable(n_table);
-		#endif
-
-		if(find_host_in_table(n_table, packet_dest)==-1)
-    	{
-			//host not in table
-			//send to all ports except the received port
-
-			for(i=0; i<node_port_num; i++)
-     		 {
-				if(i != new_job->in_port_index){
-					#ifdef DEBUG
-					printf("switch:sending packet on port %d of %d\n", i, node_port_num);
-					printf("for host: %d\n", (int)new_job->packet->dst);
-					#endif
-					packet_send(node_port[i], new_job->packet);
+		switch(new_job->type) {
+			case JOB_REG_WAIT_FOR_REPLY:
+				#ifdef DEBUG
+				printf("DNS SERVER working on JOB_REG_WAIT_FOR_REPLY\n");
+				#endif
+				for(i=0;new_job->packet->payload[i]!='\0';i++)
+				{
+					dns[i] = new_job->packet->payload[i];
+					printf("\n\n%c\n\n",dns[i]);
 				}
-			}
-		}
-		else {
-			#ifdef DEBUG
-			printf("switch: sending packet to host %d on port %d \n",  packet_dest, find_host_in_table(f_table, packet_dest));
-			printf("for host: %d\n", (int)new_job->packet->dst);
-			#endif
-			packet_send(node_port[find_host_in_table(f_table,  packet_dest)], new_job->packet);
-		}
-
-    	if(new_job->packet != NULL){
-			free(new_job->packet);
-			new_job->packet = NULL;
-		}
-		if(new_job != NULL){
-			free(new_job);
-			new_job = NULL;
-		}
+				i=add_naming_table(n_table, dns, (int) new_job->packet->src);
+				printf("got here");
+				print_ntable(n_table);
+				//send packet back to host that registered name
+				if(i!=-1) new_job->packet->payload[0]=i;
+                                else new_job->packet->payload[0]=-1;
+				packet_send(node_port[0], new_job->packet);
+    				if(new_job->packet != NULL){
+					free(new_job->packet);
+					new_job->packet = NULL;
+				}
+				if(new_job != NULL){
+					free(new_job);
+					new_job = NULL;
+				}
+			break;
+			
+			case JOB_FIND_WAIT_FOR_REPLY:
+				for(i=0;new_job->packet->payload[i] != '\0'; i++)
+				{
+					dns[i] = new_job->packet->payload[i];
+				}
+				i = find_name_in_table(n_table, dns);
+				//send packet back to host with the host id
+				if(i!=-1) new_job->packet->payload[0]=i;
+				else new_job->packet->payload[0]=-1;
+				packet_send(node_port[0], new_job->packet);
+				
+				if(new_job->packet != NULL){
+                                        free(new_job->packet);
+                                        new_job->packet = NULL;
+                                }
+                                if(new_job != NULL){
+                                        free(new_job);
+                                        new_job = NULL;
+                                }
+			break;		
 
 	}
-
+}
 
 
 
@@ -428,4 +476,3 @@ while(1)
 } /* End of while loop */
 
 }
-

@@ -65,6 +65,8 @@ while(1) {
 		case 'p':
 		case 'u':
 		case 'd':
+		case 'r':
+		case 'f':
 		case 'q': return cmd;
 		default: 
 			printf("Invalid: you entered %c\n\n", cmd);
@@ -237,7 +239,7 @@ n=sprintf(msg, "f %s",name);
 write(curr_host->send_fd, msg, n);
 
 n=0;
-whild(n<=0) {
+while(n<=0) {
 	usleep(TENMILLISEC);
 	n=read(curr_host->recv_fd, reply, MAN_MSG_LENGTH);
 	}

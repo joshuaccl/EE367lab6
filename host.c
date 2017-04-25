@@ -280,6 +280,8 @@ int ping_reply_received;
 
 int i, k, n;
 int dst;
+char dns[50];
+char dns2[50];
 char name[MAX_FILE_NAME];
 char string[PKT_PAYLOAD_MAX+1];
 char buf[MAX_FILE_BUFFER];
@@ -523,8 +525,48 @@ while(1)
 				new_job->type = JOB_SEND_PKT_ALL_PORTS;
 				new_job->packet = new_packet;
 				job_q_add(&job_q, new_job);
-
 				break;
+			case 'r'://Register a domain name
+				sscanf(man_msg, "%s", dns);
+				#ifdef DEBUG
+				printf("\n\n%s\n\n",dns);
+				#endif
+				new_packet = (struct packet *)
+						malloc(sizeof(struct packet));
+				new_packet->src = (char) host_id;
+				new_packet->dst = (int) 100;
+				new_packet->type = (char) PKT_REG_REQ;
+				for(i=0; dns[i] != '\0'; i++) {
+					new_packet->payload[i] = dns[i];
+					printf("loop");
+				}
+				new_packet->payload[i] = '\0';
+				new_packet->length = i;
+				new_job = (struct host_job *)
+						malloc(sizeof(struct host_job));
+				new_job->type = JOB_SEND_PKT_ALL_PORTS;
+				new_job->packet = new_packet;
+				job_q_add(&job_q, new_job);
+				break;
+			case 'f'://Find the domain name of a host
+				sscanf(man_msg, "%s", dns);
+				new_packet = (struct packet *)
+						malloc(sizeof(struct packet));
+				new_packet->src = (char) host_id;
+				new_packet->dst = (int) 100;
+				new_packet->type = (char) PKT_FIND_REQ;
+				for(i=0; dns[i] != '\0'; i++) {
+					new_packet->payload[i] = dns[i];
+				}
+				new_packet->payload[i] = '\0';
+				new_packet->length = i;
+				new_job = (struct host_job *)
+						malloc(sizeof(struct host_job));
+				new_job->type = JOB_SEND_PKT_ALL_PORTS;
+				new_job->packet = new_packet;
+				job_q_add(&job_q, new_job);
+				break;
+
 		}
 	}
 
@@ -662,7 +704,14 @@ while(1)
 						new_job=NULL;
 					}
 					break;
-
+				case(char) PKT_REG_REPLY:
+					new_job->type = JOB_REG_WAIT_FOR_REPLY;
+					job_q_add(&job_q, new_job);
+					break;
+				case (char) PKT_FIND_REPLY:
+					new_job->type = JOB_FIND_WAIT_FOR_REPLY;
+					job_q_add(&job_q, new_job);
+					break;
 				/*
 				 * The next two packet types
 				 * are for the upload file operation.
@@ -684,7 +733,7 @@ while(1)
 						= JOB_FILE_UPLOAD_RECV_START;
 					job_q_add(&job_q, new_job);
 					break;
-
+					
 				case (char) PKT_FILE_UPLOAD_END:
 					new_job->type
 						= JOB_FILE_UPLOAD_RECV_END;
@@ -744,7 +793,55 @@ while(1)
 
 		/* Send packet on all ports */
 		switch(new_job->type) {
-
+				// print out that we got a reply from the dns server
+			case JOB_REG_WAIT_FOR_REPLY:
+				if(new_job->packet->payload[0]==1)
+				{
+					n = sprintf(man_reply_msg, "Domain name has been registered!");
+					
+					write(man_port->send_fd, man_reply_msg, n);
+					free(new_job);
+				}
+				else
+				{
+					n = sprintf(man_reply_msg, "Sorry the server did not understand you");
+					
+					write(man_port->send_fd, man_reply_msg, n);
+					free(new_job);
+				}	
+				if(new_job->packet !=NULL){
+					free(new_job->packet);
+					new_job->packet = NULL;
+				}
+				if(new_job != NULL){
+					free(new_job);
+					new_job = NULL;
+				}
+				break;
+			case JOB_FIND_WAIT_FOR_REPLY:
+				if(new_job->packet->payload[0]!=-1)
+				{
+					n = sprintf(man_reply_msg, "The ID of the domain name requested is %d", new_job->packet->payload[0]);
+					
+					write(man_port->send_fd, man_reply_msg, n);
+					free(new_job);
+				}
+				else
+				{
+					n = sprintf(man_reply_msg, "Check your spelling bro!");
+					
+					write(man_port->send_fd, man_reply_msg, n);
+					free(new_job);
+				}
+				if(new_job->packet !=NULL){
+                                        free(new_job->packet);
+                                        new_job->packet = NULL;
+                                }
+                                if(new_job != NULL){
+                                        free(new_job);
+                                        new_job = NULL;
+                                }
+				break;
 			/* Send packets on all ports */
 			case JOB_SEND_PKT_ALL_PORTS:
 				for (k=0; k<node_port_num; k++) {
@@ -1034,7 +1131,7 @@ while(1)
 				}
 				break;
 		}
-
+	
 	} // end of job
 
 

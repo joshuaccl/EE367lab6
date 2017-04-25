@@ -629,6 +629,8 @@ else
 		}
 		else if(node_type == 'D') {
 			printf("DNS node\n");
+			fscanf(fp, " %d ", &node_id);
+			printf("node id %d\n",node_id);
 			g_net_node[i].type = DNS;
 			g_net_node[i].id = 100;
 		}

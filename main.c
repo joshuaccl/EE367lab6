@@ -50,6 +50,9 @@ for (p_node = node_list; p_node != NULL; p_node = p_node->next) {
 			/* Execute switch routine, which you have to write */
 			switch_main(p_node->id);		
 		}
+		else if (p_node->type == DNS) {
+			dns_main(100);
+		}
 		return;
 	}  
 }

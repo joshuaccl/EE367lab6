@@ -1,8 +1,8 @@
 /* 
- * host.h 
+ * dns.h 
  */
 
 
-void switch_main(int host_id);
+void dns_main(int host_id);
 
 
