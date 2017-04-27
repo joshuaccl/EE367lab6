@@ -277,6 +277,11 @@ struct net_port **node_port;  // Array of pointers to node ports
 int node_port_num;            // Number of node ports
 
 int ping_reply_received;
+//initialize dns stuff
+int dns_reg_reply_received;
+char my_domain_name[50];
+char find_domain_name[50];
+
 
 int i, k, n;
 int dst;
@@ -534,6 +539,55 @@ while(1)
 				job_q_add(&job_q, new_job);
 
 				break;
+			case 'r': //send request to register domain name
+				sscanf(man_msg, "%d %s", &dst, name);
+				new_packet = (struct packet *)
+						malloc(sizeof(struct packet));
+				new_packet->src = (char) host_id;
+				new_packet->dst = (char) 100;
+				new_packet->type = (char) PKT_REG_REQ;
+
+				for (i=0; name[i] != '\0'; i++) {
+					new_packet->payload[i] = name[i];
+				}
+				new_packet->payload[i] = '\0';
+				new_packet->length = i;
+				new_job = (struct host_job *)
+						malloc(sizeof(struct host_job));
+				new_job->type = JOB_SEND_PKT_ALL_PORTS;
+				new_job->packet = new_packet;
+				job_q_add(&job_q, new_job);
+
+				new_job2 = (struct host_job *)
+						malloc(sizeof(struct host_job));
+				dns_reg_reply_received = 0;
+				new_job2->type = JOB_DNS_REG_WAIT_FOR_REPLY;
+				new_job2->ping_timer = 10;
+				new_job2->packet = NULL;
+				job_q_add(&job_q, new_job2);
+			break;
+
+			case 'f': //send request to find host id
+				sscanf(man_msg, "%d %s", &dst, find_domain_name);
+				new_packet = (struct packet *)
+						malloc(sizeof(struct packet));
+				new_packet->src = (char) host_id;
+				new_packet->dst = (char) 100;
+				new_packet->type = (char) PKT_FIND_REQ;
+
+				for (i=0; name[i] != '\0'; i++) {
+					new_packet->payload[i] = find_domain_name[i];
+				}
+				new_packet->payload[i] = '\0';
+				new_packet->length = i;
+				new_job = (struct host_job *)
+						malloc(sizeof(struct host_job));
+				new_job->type = JOB_SEND_PKT_ALL_PORTS;
+				new_job->packet = new_packet;
+				job_q_add(&job_q, new_job);
+
+
+			break;
 		}
 	}
 
@@ -744,6 +798,38 @@ while(1)
 					job_q_add(&job_q, new_job);
 
 					break;
+				case (char) PKT_REG_REQ_REPLY:
+					dns_reg_reply_received = 1;
+					if(in_packet != NULL){
+						free(in_packet);
+
+						in_packet=NULL;
+					}
+					if(new_job!= NULL){
+						free(new_job);
+						new_job=NULL;
+					}
+				break;
+				
+				case (char)PKT_FIND_REQ_REPLY:
+					if(-1 == (int) in_packet->payload[0] ){
+						printf("Domain name: %s not found\n", find_domain_name);
+					}
+					else {
+						printf("Domain name: %s found at %d \n", find_domain_name,
+							(int) in_packet->payload[0]);
+					}
+					if(in_packet != NULL){
+						free(in_packet);
+
+						in_packet=NULL;
+					}
+					if(new_job!= NULL){
+						free(new_job);
+						new_job=NULL;
+					}
+
+				break;
 
 				default:
 					if(new_job!=NULL){
@@ -874,7 +960,7 @@ while(1)
 
 			case JOB_PING_WAIT_FOR_REPLY:
 			#ifdef DEBUG
-			printf("host %d:JOB_PING_WAIT_FOR_REPLY \n", host_id);
+			// printf("host %d:JOB_PING_WAIT_FOR_REPLY \n", host_id);
 
 			#endif
 				/* Wait for a ping reply packet */
@@ -911,7 +997,42 @@ while(1)
 				}
 
 				break;
+			case JOB_DNS_REG_WAIT_FOR_REPLY:
 
+				/* Wait for a dns reply packet */
+
+				if (dns_reg_reply_received == 1) {
+					n = sprintf(man_reply_msg, "Domain name registered!");
+
+					write(man_port->send_fd, man_reply_msg, n);
+					if(new_job->packet != NULL){
+						free(new_job->packet);
+						new_job->packet = NULL;
+					}
+					if(new_job != NULL){
+						free(new_job);
+						new_job = NULL;
+					}
+				}
+				else if (new_job->ping_timer > 1) {
+					new_job->ping_timer--;
+					job_q_add(&job_q, new_job);
+				}
+				else { /* Time out */
+					n = sprintf(man_reply_msg, "Ping time out!");
+
+					write(man_port->send_fd, man_reply_msg, n);
+					if(new_job->packet != NULL){
+						free(new_job->packet);
+						new_job->packet = NULL;
+					}
+					if(new_job != NULL){
+						free(new_job);
+						new_job = NULL;
+					}
+				}
+
+				break;
 
 		/* The next three jobs deal with uploading a file */
 
