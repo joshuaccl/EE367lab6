@@ -65,6 +65,8 @@ while(1) {
 		case 'p':
 		case 'u':
 		case 'd':
+		case 'r':
+		case 'f':
 		case 'q': return cmd;
 		default: 
 			printf("Invalid: you entered %c\n\n", cmd);
@@ -198,7 +200,7 @@ printf("%s\n",reply);
  *    -  id of the destination host 
  *    -  name of file to transfer
  */
-int register_name(struct man_port_at_main *curr_host){
+int register_name(struct man_port_at_man *curr_host){
 	int n;
 	int host_id;
 	char name[NAME_LENGTH];
@@ -236,7 +238,7 @@ int find_host_id(struct man_port_at_man *curr_host)
 	write(curr_host->send_fd, msg, n);
 	
 	n=0;
-	whild(n<=0) {
+	while(n<=0) {
 		usleep(TENMILLISEC);
 		n=read(curr_host->recv_fd, reply, MAN_MSG_LENGTH);
 		}

@@ -25,6 +25,8 @@
 #include "packet.h"
 #include "switch.h"
 #define DEBUG
+#define DEBUGTREE
+#define DEBUGGY
 
 #define BACKLOG 10
 
@@ -61,9 +63,9 @@ void init_forwarding_table(struct forwarding table[100])
 {
 	int i;
     for(i = 0; i < 100; i++){
-        table[i].port_id = i;
+        table[i].port_id = -1;
         table[i].valid = 0;   // initialize all invalid
-        table[i].dest_id = -1; //set dest_id = -1 for undefined
+        table[i].dest_id = i; //set dest_id = -1 for undefined
     }
 }
 int get_host_at_port(struct forwarding table[100], int port_id)
@@ -74,26 +76,30 @@ int get_host_at_port(struct forwarding table[100], int port_id)
 int set_src_at_port(struct forwarding table[100], int host_id, int port_id)
 {
     //when we find a destination and a port, add it to the table
-    table[port_id].dest_id = host_id;
-    table[port_id].valid = 1;
+    table[host_id].port_id = port_id;
+    table[host_id].valid = 1;
 }
 int find_host_in_table(struct forwarding table[100], int host_id)
 {
     //return the port number of a host we are looking for
     //returns -1 if the host is not defined on a port
-	int i;
-    for(i = 0; i < 100; i++){
-        if(table[i].dest_id==host_id && table[i].valid==1)
-            return i;
-    }
-    return -1;
+	// int i;
+    // for(i = 0; i < 100; i++){
+    //     if(table[i].dest_id==host_id && table[i].valid==1)
+    //         return i;
+    // }
+    // return -1;
+	if(table[host_id].valid==1){
+		return table[host_id].port_id;
+	}
+	else return -1;
 }
 void print_ftable(struct forwarding table[100])
 {
 	int i;
 	for(i = 0; i < 100; i++){
 		if(table[i].valid ==1)
-		printf("port: %d, hostid: %d\n", i, table[i].dest_id);
+		printf("host: %d, port: %d\n", i, table[i].port_id);
 	}
 }
 
@@ -377,8 +383,8 @@ while(1)
 		{
 				
 			#ifdef DEBUG
-				// printf("switch:packet RECEIEVED from port %d of %d for host %d \n", k, node_port_num, (int) in_packet->dst);
-				// printf("packet type: %d", (int) in_packet->type);
+				// printf("switch:packet RECEIEVED from  %d ", (int) in_packet->src);
+				// printf("packet type: %d\n", (int) in_packet->type);
 			#endif
 			new_job = (struct host_job *)
 				malloc(sizeof(struct host_job));
@@ -386,13 +392,16 @@ while(1)
 			new_job->packet = in_packet;
 
 			//add to forwarding table 
-			if(get_host_at_port(f_table, k)==-1){
+			// if(find_host_in_table(f_table, (int)in_packet->src) == -1){
 				set_src_at_port(f_table, (int) in_packet->src , k);
-					f_table_length++;
-				#ifdef DEBUG
-					// printf("switch:adding to forwarding table id: %d at port %d\n", in_packet->src, k);
-				#endif
-			}
+			// }
+			// if(get_host_at_port(f_table, k)==-1){
+			// 	set_src_at_port(f_table, (int) in_packet->src , k);
+			// 		f_table_length++;
+			// 	#ifdef DEBUG
+			// 		// printf("switch:adding to forwarding table id: %d at port %d\n", in_packet->src, k);
+			// 	#endif
+			// }
 
 			if(in_packet->type == (char)PKT_TREE){
 				/* RECEIVE TREE PACKET */
@@ -423,10 +432,7 @@ while(1)
 					}
 					else local_port_tree[k]=0;
 				}
-				else if(in_packet->payload[2]=='H'){
-					local_port_tree[k] = 1;
-				}
-				else if(in_packet->payload[2]=='D'){
+				else if(in_packet->payload[2]=='H' ||in_packet->payload[2]=='D' ){
 					local_port_tree[k] = 1;
 				}
 				else {
@@ -443,7 +449,7 @@ while(1)
 			else {
 				#ifdef DEBUG 
 
-				printf("switch %d: parent %d \n", host_id, get_host_at_port(f_table, local_parent));
+				// printf("switch %d: parent %d \n", host_id, get_host_at_port(f_table, local_parent));
 				printf("switch %d: received packet from %d\n", host_id, (int)in_packet->src);
 				#endif
 				new_job->type = JOB_SEND_PKT_ALL_PORTS;
@@ -483,8 +489,8 @@ while(1)
 			case JOB_SEND_PKT_ALL_PORTS:
 				packet_dest = (int) new_job->packet->dst;
 				#ifdef DEBUG
-				// printf("switch: forwarding table\n");
-				// print_ftable(f_table);
+				printf("switch %d: forwarding table\n", host_id	);
+				print_ftable(f_table);
 				#endif
 
 				if(find_host_in_table(f_table, packet_dest)==-1)
@@ -501,9 +507,9 @@ while(1)
 							#endif
 							packet_send(node_port[i], new_job->packet);
 						}
-						if(local_port_tree[i]==0)
-						printf("switch %d: port %d closed to %d \n",host_id,i,
-							get_host_at_port(f_table,i));
+						// if(local_port_tree[i]==0)
+						// printf("switch %d: port %d closed to %d \n",host_id,i,
+						// 	get_host_at_port(f_table,i));
 					}
 				}
 				else {
@@ -527,7 +533,7 @@ while(1)
 							new_job->packet->payload[2] = 'S'; //packetSenderType
 							new_job->packet->payload[3] = (i == local_parent)? 'Y' : 'N'; //packetSenderChild
 							#ifdef DEBUGTREE
-							printf("switch %d: local root %d  \n", host_id, local_root_id);
+							printf("switch %d: local root %d port %d \n", host_id, local_root_id, i);
 							#endif
 							packet_send(node_port[i], new_job->packet);
 					}

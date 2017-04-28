@@ -42,13 +42,13 @@ struct domain
 	int name_length;
 };
 
-void sigchld_handler1(int s)
+void sigchld_handler2(int s)
 {
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
 // get sockaddr, IPv4 or IPv6:
-void *get_in_addr1(struct sockaddr *sa)
+void *get_in_addr2(struct sockaddr *sa)
 {
 	if (sa->sa_family == AF_INET) {
 		return &(((struct sockaddr_in*)sa)->sin_addr);
@@ -76,7 +76,7 @@ int set_domain_name(struct domain table[255], int host_id, char name[50])
 	}
 	table[host_id].name_length = i;
 }
-int find_host_id(struct domain table[255], char name[50])
+int dns_find_host_id(struct domain table[255], char name[50])
 {
     //return the port number of a host we are looking for
     //returns -1 if the host is not defined on a port
@@ -94,7 +94,7 @@ int find_host_id(struct domain table[255], char name[50])
 	}
 	return -1;
 }
-void print_ftable(struct domain table[255])
+void print_dtable(struct domain table[255])
 {
 	int i;
 	for(i = 0; i < 100; i++){
@@ -266,7 +266,7 @@ for (k = 0; k < node_port_num; k++)
 			exit(1);
 		}
 
-		sa.sa_handler = sigchld_handler1; // reap all dead processes
+		sa.sa_handler = sigchld_handler2; // reap all dead processes
 		sigemptyset(&sa.sa_mask);
 		sa.sa_flags = SA_RESTART;
 		if (sigaction(SIGCHLD, &sa, NULL) == -1)
@@ -330,7 +330,7 @@ while(1)
           fcntl(new_fd, F_SETFL, O_NONBLOCK); 		// Change the socket into non-blocking state
 
 
-					inet_ntop(their_addr.ss_family, get_in_addr1((struct sockaddr *)&their_addr), s, sizeof s);
+					inet_ntop(their_addr.ss_family, get_in_addr2((struct sockaddr *)&their_addr), s, sizeof s);
 
 
 					char msg[100+4];
@@ -363,14 +363,13 @@ while(1)
 					}
 					close(new_fd);
 			}
-			else
-			{}   //printf("No data within five seconds.\n");
+
 
 		// -------------------------											!!!!!!!!!!!!!!!!!!!!!!!!!
 
 		}
 
-		if(n>0 && ((int) in_packet->dst == host_id) //DNS PACKETS ONLY
+		if(n>0 && ((int) in_packet->dst == host_id)) //DNS PACKETS ONLY
 		{
 				
 			#ifdef DEBUG
@@ -386,14 +385,14 @@ while(1)
 			switch(in_packet->type)
 			{
 				case(char) PKT_FIND_REQ:
-				new_job->type = JOB_DNS_FIND_SEND_REPLY;
-				job_q_add(&job_q, new_job);
+					new_job->type = JOB_DNS_FIND_SEND_REPLY;
+					job_q_add(&job_q, new_job);
 				
 				break;
 
 				case(char) PKT_REG_REQ:
-				new_job->type = JOB_DNS_REG_SEND_REPLY;
-				job_q_add(&job_q, new_job);
+					new_job->type = JOB_DNS_REG_SEND_REPLY;
+					job_q_add(&job_q, new_job);
 				
 				for(i = 0; i <  50; i++){
 					domain_name[i] = in_packet->payload[i];
@@ -409,14 +408,14 @@ while(1)
 						free(new_job);
 						new_job = NULL;
 					}
+					break;
 			}//end switch case
 
 			
 
 		}
 		else { //packet not for dns
-			if(send_tree_pkt > 10){
-			
+			if(send_tree_pkt ==10 ){
 				new_job = (struct host_job *)
 					malloc(sizeof(struct host_job));
 				new_job->type = JOB_SEND_TREE_PKT;	
@@ -424,12 +423,13 @@ while(1)
 				
 				job_q_add(&job_q, new_job);
 				send_tree_pkt = 0;
-
 			}
 			else if(in_packet!= NULL){
 				free(in_packet);
 				in_packet=NULL;
+			
 			}
+
 
 		}
 
@@ -462,7 +462,7 @@ while(1)
 				new_packet->src = (char) host_id;
 				new_packet->type = PKT_FIND_REQ_REPLY;
 				new_packet->length = 1;
-				new_packet->payload[0] = (char) find_host_id(domain_table, domain_name); 
+				new_packet->payload[0] = (char) dns_find_host_id(domain_table, domain_name); 
 
 				/* Create job for the ping reply */
 				new_job2 = (struct host_job *)
@@ -534,6 +534,17 @@ while(1)
 					free(new_job);
 					new_job = NULL;
 				}
+				break;
+				default:
+
+					if(new_job->packet != NULL){
+						free(new_job->packet);
+						new_job->packet = NULL;
+					}
+					if(new_job != NULL){
+						free(new_job);
+						new_job = NULL;
+					}
 				break;
 		}//end switch
 

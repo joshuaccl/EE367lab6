@@ -11,10 +11,12 @@ enum host_job_type {
 	JOB_FILE_UPLOAD_RECV_START,
 	JOB_FILE_UPLOAD_RECV_END,
 	JOB_SEND_TREE_PKT,
-	JOB_DNS_REG,
-	JOB_DNS_REG_REPLY,
-	JOB_DNS_REQ,
-	JOB_DNS_REQ_REPLY
+	// JOB_DNS_REG_REQ, //host
+	JOB_DNS_REG_SEND_REPLY, //dns
+	// JOB_DNS_FIND_REQ, //host
+	JOB_DNS_FIND_SEND_REPLY, //dns
+	JOB_DNS_REG_WAIT_FOR_REPLY //host
+	// JOB_DNS_FIND_WAIT_FOR_REPLY //host 
 };
 
 struct host_job {
@@ -37,5 +39,9 @@ struct job_queue {
 };
 
 void host_main(int host_id);
-
+void job_q_init(struct job_queue *j_q);
+int job_q_num(struct job_queue *j_q);
+int job_q_len(struct job_queue *j_q);
+struct host_job *job_q_remove(struct job_queue *j_q);
+void job_q_add(struct job_queue *j_q, struct host_job *j);
 
