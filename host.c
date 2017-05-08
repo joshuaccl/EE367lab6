@@ -473,8 +473,8 @@ while(1)
 				sscanf(man_msg, "%d", &dst);
 				new_packet = (struct packet *)
 						malloc(sizeof(struct packet));
-				new_packet->src = (char) host_id;
-				new_packet->dst = (char) dst;
+				new_packet->src = (int) host_id;
+				new_packet->dst = (int) dst;
 				new_packet->type = (char) PKT_PING_REQ;
 				new_packet->length = 0;
 				new_job = (struct host_job *)
@@ -511,8 +511,8 @@ while(1)
 				sscanf(man_msg, "%d %s", &dst, name);
 				new_packet = (struct packet *)
 						malloc(sizeof(struct packet));
-				new_packet->src = (char) host_id;
-				new_packet->dst = (char) dst;
+				new_packet->src = (int) host_id;
+				new_packet->dst = (int) dst;
 				new_packet->type = (char) PKT_UPLOAD_REQ;
 
 				for (i=0; name[i] != '\0'; i++) {
@@ -533,7 +533,7 @@ while(1)
 				#endif
 				new_packet = (struct packet *)
 						malloc(sizeof(struct packet));
-				new_packet->src = (char) host_id;
+				new_packet->src = (int) host_id;
 				new_packet->dst = (int) 100;
 				new_packet->type = (char) PKT_REG_REQ;
 				for(i=0; dns[i] != '\0'; i++) {
@@ -552,7 +552,7 @@ while(1)
 				sscanf(man_msg, "%s", dns);
 				new_packet = (struct packet *)
 						malloc(sizeof(struct packet));
-				new_packet->src = (char) host_id;
+				new_packet->src = (int) host_id;
 				new_packet->dst = (int) 100;
 				new_packet->type = (char) PKT_FIND_REQ;
 				for(i=0; dns[i] != '\0'; i++) {
@@ -582,10 +582,12 @@ while(1)
 		if(node_port[k]->type ==PIPE){
 			n = packet_recv(node_port[k], in_packet);
 			if(n>0){
-				printf("Packet contents:  \n");
+				if(in_packet->type == PKT_REG_REPLY) printf("this packet type is PKT_REG_REPLY\n");
+				printf("Host %d Packet contents9:  ",host_id);
 				for(i = 0; i < in_packet->length; i++){
-					printf("%c", in_packet->payload[i]);
+					printf("%c", (char) in_packet->payload[i]);
 				}
+				printf("\n");
 			}
 
 		}
@@ -633,8 +635,8 @@ while(1)
 					if(n>0)
 					{
 
-						in_packet->src = (char) msg[0];
-						in_packet->dst = (char) msg[1];
+						in_packet->src = (int) msg[0];
+						in_packet->dst = (int) msg[1];
 						in_packet->type = (char) msg[2];
 						in_packet->length = (int) msg[3];
 						for (d=0; d<in_packet->length; d++)
@@ -795,19 +797,17 @@ while(1)
 		switch(new_job->type) {
 				// print out that we got a reply from the dns server
 			case JOB_REG_WAIT_FOR_REPLY:
-				if(new_job->packet->payload[0]==1)
+				if(new_job->packet->payload[0]=='1')
 				{
 					n = sprintf(man_reply_msg, "Domain name has been registered!");
 					
 					write(man_port->send_fd, man_reply_msg, n);
-					free(new_job);
 				}
 				else
 				{
 					n = sprintf(man_reply_msg, "Sorry the server did not understand you");
 					
 					write(man_port->send_fd, man_reply_msg, n);
-					free(new_job);
 				}	
 				if(new_job->packet !=NULL){
 					free(new_job->packet);
@@ -819,19 +819,17 @@ while(1)
 				}
 				break;
 			case JOB_FIND_WAIT_FOR_REPLY:
-				if(new_job->packet->payload[0]!=-1)
+				if(new_job->packet->payload[0]!='E')
 				{
-					n = sprintf(man_reply_msg, "The ID of the domain name requested is %d", new_job->packet->payload[0]);
+					n = sprintf(man_reply_msg, "The ID of the domain name requested is %d", (int) new_job->packet->payload[0]);
 					
 					write(man_port->send_fd, man_reply_msg, n);
-					free(new_job);
 				}
 				else
 				{
 					n = sprintf(man_reply_msg, "Check your spelling bro!");
 					
 					write(man_port->send_fd, man_reply_msg, n);
-					free(new_job);
 				}
 				if(new_job->packet !=NULL){
                                         free(new_job->packet);
@@ -873,8 +871,8 @@ while(1)
 				/* Create ping reply packet */
 				new_packet = (struct packet *)
 					malloc(sizeof(struct packet));
-				new_packet->dst = (char) new_job->packet->src; //KASEY
-				new_packet->src = (char) host_id;
+				new_packet->dst = (int) new_job->packet->src; //KASEY
+				new_packet->src = (int) host_id;
 				new_packet->type = PKT_PING_REPLY;
 				new_packet->length = 0;
 
@@ -966,8 +964,8 @@ while(1)
 						new_packet = (struct packet *)
 							malloc(sizeof(struct packet));
 						new_packet->dst
-							= (char) new_job->file_upload_dst;
-						new_packet->src = (char) host_id;
+							= (int) new_job->file_upload_dst;
+						new_packet->src = (int) host_id;
 						new_packet->type
 							= (char) PKT_FILE_UPLOAD_START;
 						for (i=0;
@@ -993,8 +991,8 @@ while(1)
 							new_packet2 = (struct packet *)
 								malloc(sizeof(struct packet));
 							new_packet2->dst
-								= (char) new_job->file_upload_dst;
-							new_packet2->src = (char) host_id;
+								= (int) new_job->file_upload_dst;
+							new_packet2->src = (int) host_id;
 							new_packet2->type = (char) PKT_FILE_UPLOAD_END;
 
 

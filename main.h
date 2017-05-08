@@ -41,8 +41,8 @@ struct net_port
 /* Packet sent between nodes  */
 
 struct packet { /* struct for a packet */
-	char src;
-	char dst;
+	int src;
+	int dst;
 	char type;
 	int length;
 	char payload[PAYLOAD_MAX];

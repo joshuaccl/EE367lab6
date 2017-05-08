@@ -129,13 +129,14 @@ int packet_recv(struct net_port *port, struct packet *p)
 			n = read(port->pipe_recv_fd, msg, MAX+4);
 			if (n>0)
 			{
-				p->src = (char) msg[0];
-				p->dst = (char) msg[1];
+				p->src = (int) msg[0];
+				p->dst = (int) msg[1];
 				p->type = (char) msg[2];
 				p->length = (int) msg[3];
 				for (i=0; i<p->length; i++)
 				{
 					p->payload[i] = msg[i+4];
+					printf("The packet:%c\n",p->payload[i]);
 				}
 				printf("packet.c: received packet for %d\n", (int)p->dst);
 			}

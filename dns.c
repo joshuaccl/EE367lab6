@@ -61,6 +61,7 @@ void init_naming_table(struct naming table[255])
 	int i;
 	for(i=0;i<255;i++){
 		table[i].empty = 1;
+		table[i].id = -1;
 	}
 }
 
@@ -70,7 +71,7 @@ int add_naming_table(struct naming table[255], char name[50], int id)
     for(int i=0; i<255; i++){
 	if(table[i].empty==1) //if we're empty add the entry
 	{
-		for(int j=0; i<50; j++){
+		for(int j=0; j<50; j++){
 			table[i].name[j]=name[j];
 		}
 
@@ -88,7 +89,7 @@ int find_name_in_table(struct naming table[255], char name[50])
     //returns -1 if the host is not defined on a port
 	int i;
     for(i = 0; i < 255; i++){
-        if(table[i].name==name && table[i].empty==0)
+        if( strcmp(table[i].name,name) == 0 && table[i].empty==0)
             return table[i].id;
     }
     return -1;
@@ -345,9 +346,9 @@ while(1)
 					{
 
 
-						in_packet->src = (char) msg[0]; 
-						in_packet->dst = (char) msg[1];
-						in_packet->type = (char) msg[2];
+						in_packet->src = (int) msg[0]; 
+						in_packet->dst = (int) msg[1];
+						in_packet->type = (int) msg[2];
 		
 						in_packet->length = (int) msg[3];
 						for (d=0; d < in_packet->length; d++)
@@ -421,17 +422,21 @@ while(1)
 				#ifdef DEBUG
 				printf("DNS SERVER working on JOB_REG_WAIT_FOR_REPLY\n");
 				#endif
-				for(i=0;new_job->packet->payload[i]!='\0';i++)
+				for(i=0;i<(new_job->packet->length);i++)
 				{
 					dns[i] = new_job->packet->payload[i];
 					printf("\n\n%c\n\n",dns[i]);
+					printf("loop");
 				}
 				i=add_naming_table(n_table, dns, (int) new_job->packet->src);
-				printf("got here");
 				print_ntable(n_table);
 				//send packet back to host that registered name
-				if(i!=-1) new_job->packet->payload[0]=i;
-                                else new_job->packet->payload[0]=-1;
+				if(i!=-1) new_job->packet->payload[0]='1';
+                                else new_job->packet->payload[0]='0';
+				new_job->packet->dst = new_job->packet->src;
+				new_job->packet->src = 100;
+				new_job->packet->type = (char) PKT_REG_REPLY;
+				new_job->packet->length = 1;
 				packet_send(node_port[0], new_job->packet);
     				if(new_job->packet != NULL){
 					free(new_job->packet);
@@ -444,14 +449,18 @@ while(1)
 			break;
 			
 			case JOB_FIND_WAIT_FOR_REPLY:
-				for(i=0;new_job->packet->payload[i] != '\0'; i++)
+				for(i=0;i<new_job->packet->length; i++)
 				{
 					dns[i] = new_job->packet->payload[i];
 				}
 				i = find_name_in_table(n_table, dns);
 				//send packet back to host with the host id
-				if(i!=-1) new_job->packet->payload[0]=i;
-				else new_job->packet->payload[0]=-1;
+				if(i!=-1) new_job->packet->payload[0]=(char) i;
+				else new_job->packet->payload[0]='E';
+				new_job->packet->dst = new_job->packet->src;
+				new_job->packet->src = 100;
+				new_job->packet->type = (char) PKT_FIND_REPLY;
+				new_job->packet->length = 1;
 				packet_send(node_port[0], new_job->packet);
 				
 				if(new_job->packet != NULL){

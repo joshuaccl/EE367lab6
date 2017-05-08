@@ -339,8 +339,8 @@ while(1)
 					{
 
 
-						in_packet->src = (char) msg[0]; 
-						in_packet->dst = (char) msg[1];
+						in_packet->src = (int) msg[0]; 
+						in_packet->dst = (int) msg[1];
 						in_packet->type = (char) msg[2];
 		
 						in_packet->length = (int) msg[3];
