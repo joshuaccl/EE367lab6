@@ -171,22 +171,21 @@ char msg[MAN_MSG_LENGTH];
 char reply[MAN_MSG_LENGTH];
 int host_to_ping;
 int n;
-char id_or_name;
+int id_or_name;
 char name_to_ping[50];
 
-
-printf("Choose one: \n (i) ping host by id \n (n) ping host by dns name \n  ");
-scanf("%c", &id_or_name);
-if(id_or_name == 'i'){
+printf("Choose one:  (0) ping host by id  (1) ping host by dns name ");
+scanf("%d", &id_or_name);
+if(id_or_name == 0){
 	printf("Enter id of host to ping: ");
 	scanf("%d", &host_to_ping);
-	n = sprintf(msg, "p i %d ", host_to_ping);
+	n = sprintf(msg, "p %d %d ", id_or_name, host_to_ping);
 	write(curr_host->send_fd, msg, n);
 }
-if(id_or_name == 'n'){
+else if(id_or_name == 1){
 	printf("Enter name of host to ping: ");
-	scanf("%s", &name_to_ping);
-	n = sprintf(msg, "p i %s ", name_to_ping);
+	scanf("%s", name_to_ping);
+	n = sprintf(msg, "p %d %s ", id_or_name, name_to_ping);
 	write(curr_host->send_fd, msg, n);
 }
 
@@ -205,7 +204,7 @@ printf("%s\n",reply);
  * Command host to send a file to another host.
  *
  * User is queried for the
- *    - name of the file to transfer; 
+ *    - name of the file to transfer;
  *        the file is in the current directory 'dir' 
  *    - id of the host to ping.
  *

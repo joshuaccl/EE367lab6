@@ -262,6 +262,7 @@ int job_q_len(struct job_queue *j_q)
 
 void host_main(int host_id)
 {
+int name_or_id;
 
 /* State */
 char dir[MAX_DIR_NAME];
@@ -470,7 +471,15 @@ while(1)
 
 			case 'p': // Sending ping request
 				// Create new ping request packet
+				
+				sscanf(man_msg, "%d", &name_or_id);
+				
+				if(name_or_id==1){
+
+				}
+				else if(name_or_id ==0){
 				sscanf(man_msg, "%d", &dst);
+				
 				new_packet = (struct packet *)
 						malloc(sizeof(struct packet));
 				new_packet->src = (int) host_id;
@@ -490,6 +499,8 @@ while(1)
 				new_job2->ping_timer = 10;
 				new_job2->packet = NULL;
 				job_q_add(&job_q, new_job2);
+				}
+
 
 				break;
 
