@@ -263,6 +263,8 @@ int job_q_len(struct job_queue *j_q)
 void host_main(int host_id)
 {
 int name_or_id;
+char host_name[50];
+int ping_host_name = 0;
 
 /* State */
 char dir[MAX_DIR_NAME];
@@ -472,33 +474,51 @@ while(1)
 			case 'p': // Sending ping request
 				// Create new ping request packet
 				
-				sscanf(man_msg, "%d", &name_or_id);
+				sscanf(man_msg, "%d %s", &name_or_id, host_name);
 				
 				if(name_or_id==1){
-
+					ping_host_name = 1;
+					// printf("pinging %s\n", host_name);
+					
+					//send a find request to dns 
+					new_packet = (struct packet *)
+							malloc(sizeof(struct packet));
+					new_packet->src = (int) host_id;
+					new_packet->dst = (int) 100;
+					new_packet->type = (char) PKT_FIND_REQ;
+					for(i=0; dns[i] != '\0'; i++) {
+						new_packet->payload[i] = host_name[i];
+					}
+					new_packet->payload[i] = '\0';
+					new_packet->length = i;
+					new_job = (struct host_job *)
+							malloc(sizeof(struct host_job));
+					new_job->type = JOB_SEND_PKT_ALL_PORTS;
+					new_job->packet = new_packet;
+					job_q_add(&job_q, new_job);
+					memset(host_name, 0,50);
 				}
 				else if(name_or_id ==0){
-				sscanf(man_msg, "%d", &dst);
-				
-				new_packet = (struct packet *)
-						malloc(sizeof(struct packet));
-				new_packet->src = (int) host_id;
-				new_packet->dst = (int) dst;
-				new_packet->type = (char) PKT_PING_REQ;
-				new_packet->length = 0;
-				new_job = (struct host_job *)
-						malloc(sizeof(struct host_job));
-				new_job->packet = new_packet;
-				new_job->type = JOB_SEND_PKT_ALL_PORTS;
-				job_q_add(&job_q, new_job);
+					dst = host_name[0];
+					new_packet = (struct packet *)
+							malloc(sizeof(struct packet));
+					new_packet->src = (int) host_id;
+					new_packet->dst = (int) dst;
+					new_packet->type = (char) PKT_PING_REQ;
+					new_packet->length = 0;
+					new_job = (struct host_job *)
+							malloc(sizeof(struct host_job));
+					new_job->packet = new_packet;
+					new_job->type = JOB_SEND_PKT_ALL_PORTS;
+					job_q_add(&job_q, new_job);
 
-				new_job2 = (struct host_job *)
-						malloc(sizeof(struct host_job));
-				ping_reply_received = 0;
-				new_job2->type = JOB_PING_WAIT_FOR_REPLY;
-				new_job2->ping_timer = 10;
-				new_job2->packet = NULL;
-				job_q_add(&job_q, new_job2);
+					new_job2 = (struct host_job *)
+							malloc(sizeof(struct host_job));
+					ping_reply_received = 0;
+					new_job2->type = JOB_PING_WAIT_FOR_REPLY;
+					new_job2->ping_timer = 10;
+					new_job2->packet = NULL;
+					job_q_add(&job_q, new_job2);
 				}
 
 
@@ -832,24 +852,50 @@ while(1)
 			case JOB_FIND_WAIT_FOR_REPLY:
 				if(new_job->packet->payload[0]!='E')
 				{
-					n = sprintf(man_reply_msg, "The ID of the domain name requested is %d", (int) new_job->packet->payload[0]);
-					
-					write(man_port->send_fd, man_reply_msg, n);
+
+					if(ping_host_name == 1){
+							ping_host_name = 0;
+						new_packet = (struct packet *)
+								malloc(sizeof(struct packet));
+						new_packet->src = (int) host_id;
+						new_packet->dst = (int) new_job->packet->payload[0];
+						new_packet->type = (char) PKT_PING_REQ;
+						new_packet->length = 0;
+						new_job3 = (struct host_job *)
+								malloc(sizeof(struct host_job));
+						new_job3->packet = new_packet;
+						new_job3->type = JOB_SEND_PKT_ALL_PORTS;
+						job_q_add(&job_q, new_job3);
+
+						new_job2 = (struct host_job *)
+								malloc(sizeof(struct host_job));
+						ping_reply_received = 0;
+						new_job2->type = JOB_PING_WAIT_FOR_REPLY;
+						new_job2->ping_timer = 10;
+						new_job2->packet = NULL;
+						job_q_add(&job_q, new_job2);
+					}
+					else {
+						n = sprintf(man_reply_msg, "The ID of the domain name requested is %d", (int) new_job->packet->payload[0]);
+						
+						write(man_port->send_fd, man_reply_msg, n);
+					}
 				}
 				else
 				{
 					n = sprintf(man_reply_msg, "Check your spelling bro!");
 					
 					write(man_port->send_fd, man_reply_msg, n);
+
 				}
-				if(new_job->packet !=NULL){
-                                        free(new_job->packet);
-                                        new_job->packet = NULL;
-                                }
-                                if(new_job != NULL){
-                                        free(new_job);
-                                        new_job = NULL;
-                                }
+					if(new_job->packet !=NULL){
+							free(new_job->packet);
+							new_job->packet = NULL;
+					}
+					if(new_job != NULL){
+							free(new_job);
+							new_job = NULL;
+					}
 				break;
 			/* Send packets on all ports */
 			case JOB_SEND_PKT_ALL_PORTS:

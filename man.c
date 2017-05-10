@@ -179,12 +179,14 @@ scanf("%d", &id_or_name);
 if(id_or_name == 0){
 	printf("Enter id of host to ping: ");
 	scanf("%d", &host_to_ping);
-	n = sprintf(msg, "p %d %d ", id_or_name, host_to_ping);
+	name_to_ping[0]=(char)host_to_ping;
+	n = sprintf(msg, "p %d %s ", id_or_name, name_to_ping);
 	write(curr_host->send_fd, msg, n);
 }
 else if(id_or_name == 1){
 	printf("Enter name of host to ping: ");
 	scanf("%s", name_to_ping);
+	printf("\n");
 	n = sprintf(msg, "p %d %s ", id_or_name, name_to_ping);
 	write(curr_host->send_fd, msg, n);
 }
