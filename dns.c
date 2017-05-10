@@ -67,20 +67,13 @@ void init_naming_table(struct naming table[255])
 
 int add_naming_table(struct naming table[255], char name[50], int id)
 {
-    //Find the first empty entry
-    for(int i=0; i<255; i++){
-	if(table[i].empty==1) //if we're empty add the entry
-	{
 		for(int j=0; j<50; j++){
-			table[i].name[j]=name[j];
+			table[id].name[j]=name[j];
 		}
 
-		table[i].id=id;
-		table[i].empty=0;
+		table[id].id=id;
+		table[id].empty=0;
 		return 1;
-	}
-     }
-	return -1;
 }
 
 int find_name_in_table(struct naming table[255], char name[50])
@@ -94,6 +87,7 @@ int find_name_in_table(struct naming table[255], char name[50])
     }
     return -1;
 }
+
 void print_ntable(struct naming table[255])
 {
 	int i;
