@@ -265,6 +265,7 @@ void host_main(int host_id)
 int name_or_id;
 char host_name[50];
 int ping_host_name = 0;
+int download_host_name = 0;
 
 /* State */
 char dir[MAX_DIR_NAME];
@@ -539,23 +540,47 @@ while(1)
 
 				break;
 			case 'd':
-				sscanf(man_msg, "%d %s", &dst, name);
-				new_packet = (struct packet *)
-						malloc(sizeof(struct packet));
-				new_packet->src = (int) host_id;
-				new_packet->dst = (int) dst;
-				new_packet->type = (char) PKT_UPLOAD_REQ;
-
-				for (i=0; name[i] != '\0'; i++) {
-					new_packet->payload[i] = name[i];
+				sscanf(man_msg, "%d %s %s", &name_or_id, name, host_name);
+				if(name_or_id==1){
+					download_host_name = 1;
+					
+					//send a find request to dns 
+					new_packet = (struct packet *)
+							malloc(sizeof(struct packet));
+					new_packet->src = (int) host_id;
+					new_packet->dst = (int) 100;
+					new_packet->type = (char) PKT_FIND_REQ;
+					for(i=0; dns[i] != '\0'; i++) {
+						new_packet->payload[i] = host_name[i];
+					}
+					new_packet->payload[i] = '\0';
+					new_packet->length = i;
+					new_job = (struct host_job *)
+							malloc(sizeof(struct host_job));
+					new_job->type = JOB_SEND_PKT_ALL_PORTS;
+					new_job->packet = new_packet;
+					job_q_add(&job_q, new_job);
+					memset(host_name, 0,50);
 				}
-				new_packet->payload[i] = '\0';
-				new_packet->length = i;
-				new_job = (struct host_job *)
-						malloc(sizeof(struct host_job));
-				new_job->type = JOB_SEND_PKT_ALL_PORTS;
-				new_job->packet = new_packet;
-				job_q_add(&job_q, new_job);
+				else if(name_or_id ==0){
+
+					new_packet = (struct packet *)
+							malloc(sizeof(struct packet));
+					new_packet->src = (int) host_id;
+					new_packet->dst = (int) dst;
+					new_packet->type = (char) PKT_UPLOAD_REQ;
+
+					for (i=0; name[i] != '\0'; i++) {
+						new_packet->payload[i] = name[i];
+					}
+					new_packet->payload[i] = '\0';
+					new_packet->length = i;
+					new_job = (struct host_job *)
+							malloc(sizeof(struct host_job));
+					new_job->type = JOB_SEND_PKT_ALL_PORTS;
+					new_job->packet = new_packet;
+					job_q_add(&job_q, new_job);
+				}
 				break;
 			case 'r'://Register a domain name
 				sscanf(man_msg, "%s", dns);
@@ -874,6 +899,27 @@ while(1)
 						new_job2->ping_timer = 10;
 						new_job2->packet = NULL;
 						job_q_add(&job_q, new_job2);
+					}
+					else if (download_host_name==1){
+						
+						new_packet = (struct packet *)
+								malloc(sizeof(struct packet));
+						new_packet->src = (int) host_id;
+						new_packet->dst =  (int) new_job->packet->payload[0];
+						new_packet->type = (char) PKT_UPLOAD_REQ;
+
+						for (i=0; name[i] != '\0'; i++) {
+							new_packet->payload[i] = name[i];
+						}
+						new_packet->payload[i] = '\0';
+						new_packet->length = i;
+						new_job2 = (struct host_job *)
+								malloc(sizeof(struct host_job));
+						new_job2->type = JOB_SEND_PKT_ALL_PORTS;
+						new_job2->packet = new_packet;
+						job_q_add(&job_q, new_job2);
+						memset(name, 0 ,MAX_FILE_NAME);
+				
 					}
 					else {
 						n = sprintf(man_reply_msg, "The ID of the domain name requested is %d", (int) new_job->packet->payload[0]);

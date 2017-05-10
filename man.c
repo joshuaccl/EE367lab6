@@ -284,16 +284,33 @@ int file_download(struct man_port_at_man *curr_host)
 {
 int n;
 int host_id;
+int id_or_name;
+char host_name[50];
 char name[NAME_LENGTH];
 char msg[NAME_LENGTH];
 
 printf("Enter file name to download: ");
 scanf("%s", name);
-printf("Enter host id of source:  ");
-scanf("%d", &host_id);
-printf("\n");
+printf("Choose one:  (0) ping host by id  (1) ping host by dns name ");
+scanf("%d", &id_or_name);
 
-n = sprintf(msg, "d %d %s", host_id, name);
+if(id_or_name == 0){
+	printf("Enter host id of source: ");
+	scanf("%d", &host_id);
+	host_name[0]=(char)host_id;
+
+}
+else if(id_or_name == 1){
+	printf("Enter name of source: ");
+	scanf("%s", host_name);
+	printf("\n");
+	host_id = 0;
+	
+
+}
+
+
+n = sprintf(msg, "d %d %s %s", id_or_name, name, host_name);
 write(curr_host->send_fd, msg, n);
 usleep(TENMILLISEC);
 }
